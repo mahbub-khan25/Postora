@@ -3,7 +3,7 @@ use postora_planner::{
     build_plan, detect_system, Action, ActionId, ApplyRequest, Plan, SecureBootState, SystemInfo,
 };
 use gtk::glib;
-use gtk::{Align, Orientation};
+use gtk::{Align, Orientation, PolicyType, WrapMode};
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::io::{BufRead, BufReader, Write};
@@ -50,11 +50,6 @@ fn build_ui(app: &adw::Application) {
         .build();
 
     let header = adw::HeaderBar::new();
-    let analyze_button = gtk::Button::with_label("Analyze System");
-    let apply_button = gtk::Button::with_label("Apply Selected Changes");
-    apply_button.set_sensitive(false);
-    header.pack_start(&analyze_button);
-    header.pack_end(&apply_button);
 
     let status_group = adw::PreferencesGroup::builder().title("System").build();
     let status_row = adw::ActionRow::builder()
@@ -70,15 +65,24 @@ fn build_ui(app: &adw::Application) {
     action_group.add(&empty_row);
 
     let progress = gtk::ProgressBar::new();
+    progress.set_hexpand(true);
     progress.set_show_text(true);
     progress.set_text(Some("Idle"));
 
     let log_view = gtk::TextView::new();
     log_view.set_editable(false);
+    log_view.set_left_margin(8);
     log_view.set_monospace(true);
+    log_view.set_right_margin(8);
+    log_view.set_top_margin(8);
+    log_view.set_bottom_margin(8);
     log_view.set_vexpand(true);
+    log_view.set_wrap_mode(WrapMode::Char);
     let log_scroller = gtk::ScrolledWindow::builder()
-        .min_content_height(180)
+        .hscrollbar_policy(PolicyType::Never)
+        .min_content_height(170)
+        .max_content_height(240)
+        .propagate_natural_height(true)
         .vexpand(true)
         .child(&log_view)
         .build();
@@ -95,15 +99,42 @@ fn build_ui(app: &adw::Application) {
     page.set_margin_end(18);
     page.append(&status_group);
     page.append(&action_group);
-    page.append(&progress);
     page.append(&log_expander);
+
+    let content_scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never)
+        .vexpand(true)
+        .child(&page)
+        .build();
+
+    let analyze_button = gtk::Button::with_label("Analyze System");
+    let apply_button = gtk::Button::with_label("Apply Selected Changes");
+    apply_button.set_sensitive(false);
+
+    let button_box = gtk::Box::new(Orientation::Horizontal, 8);
+    button_box.set_halign(Align::End);
+    button_box.append(&analyze_button);
+    button_box.append(&apply_button);
+
+    let footer = gtk::Box::new(Orientation::Vertical, 8);
+    footer.set_margin_top(10);
+    footer.set_margin_bottom(10);
+    footer.set_margin_start(18);
+    footer.set_margin_end(18);
+    footer.append(&progress);
+    footer.append(&button_box);
+
+    let root = gtk::Box::new(Orientation::Vertical, 0);
+    root.append(&content_scroller);
+    root.append(&footer);
 
     let toolbar_view = adw::ToolbarView::new();
     toolbar_view.add_top_bar(&header);
-    toolbar_view.set_content(Some(&page));
+    toolbar_view.set_content(Some(&root));
     window.set_content(Some(&toolbar_view));
 
     let (sender, receiver) = mpsc::channel::<WorkerMessage>();
+    let rendered_action_rows = Rc::new(RefCell::new(Vec::<adw::ActionRow>::new()));
 
     {
         let state = state.clone();
@@ -113,6 +144,8 @@ fn build_ui(app: &adw::Application) {
         let progress = progress.clone();
         let apply_button = apply_button.clone();
         let log_view = log_view.clone();
+        let log_scroller = log_scroller.clone();
+        let rendered_action_rows = rendered_action_rows.clone();
         glib::timeout_add_local(Duration::from_millis(100), move || {
             for message in receiver.try_iter() {
                 match message {
@@ -120,39 +153,51 @@ fn build_ui(app: &adw::Application) {
                         *state.system.borrow_mut() = Some(system.clone());
                         *state.plan.borrow_mut() = Some(plan.clone());
                         state.selected.borrow_mut().clear();
-                        action_group.remove(&empty_row);
-                        render_actions(&action_group, &state, &plan);
+                        for row in rendered_action_rows.borrow_mut().drain(..) {
+                            action_group.remove(&row);
+                        }
+                        if empty_row.parent().is_some() {
+                            action_group.remove(&empty_row);
+                        }
+                        render_actions(&action_group, &state, &plan, &rendered_action_rows);
                         status_row.set_title(&format_system_title(&system));
                         status_row.set_subtitle(&format_system_subtitle(&system));
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Analysis complete"));
                         apply_button.set_sensitive(plan.actions.iter().any(|action| !action.already_complete));
-                        append_log(&log_view, "Analysis complete.");
+                        append_log(&log_view, &log_scroller, "Analysis complete.");
                     }
                     WorkerMessage::Analyzed(Err(error)) => {
+                        for row in rendered_action_rows.borrow_mut().drain(..) {
+                            action_group.remove(&row);
+                        }
+                        if empty_row.parent().is_none() {
+                            action_group.add(&empty_row);
+                        }
+                        state.selected.borrow_mut().clear();
                         status_row.set_title("Unsupported or unavailable system");
                         status_row.set_subtitle(&error);
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Analysis failed"));
                         apply_button.set_sensitive(false);
-                        append_log(&log_view, &format!("Analysis failed: {error}"));
+                        append_log(&log_view, &log_scroller, &format!("Analysis failed: {error}"));
                     }
                     WorkerMessage::HelperLine(line) => {
                         progress.pulse();
                         progress.set_text(Some("Applying changes"));
-                        append_log(&log_view, &line);
+                        append_log(&log_view, &log_scroller, &line);
                     }
                     WorkerMessage::ApplyFinished(Ok(())) => {
                         progress.set_fraction(1.0);
                         progress.set_text(Some("Finished"));
                         apply_button.set_sensitive(false);
-                        append_log(&log_view, "Apply finished.");
+                        append_log(&log_view, &log_scroller, "Apply finished.");
                     }
                     WorkerMessage::ApplyFinished(Err(error)) => {
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Apply failed"));
                         apply_button.set_sensitive(true);
-                        append_log(&log_view, &format!("Apply failed: {error}"));
+                        append_log(&log_view, &log_scroller, &format!("Apply failed: {error}"));
                     }
                 }
             }
@@ -164,10 +209,11 @@ fn build_ui(app: &adw::Application) {
         let sender = sender.clone();
         let progress = progress.clone();
         let log_view = log_view.clone();
+        let log_scroller = log_scroller.clone();
         analyze_button.connect_clicked(move |_| {
             progress.pulse();
             progress.set_text(Some("Analyzing"));
-            append_log(&log_view, "Analyzing system...");
+            append_log(&log_view, &log_scroller, "Analyzing system...");
             let sender = sender.clone();
             std::thread::spawn(move || {
                 let system = detect_system();
@@ -184,6 +230,7 @@ fn build_ui(app: &adw::Application) {
         let sender = sender.clone();
         let progress = progress.clone();
         let log_view = log_view.clone();
+        let log_scroller = log_scroller.clone();
         apply_button.connect_clicked(move |button| {
             let Some(system) = state.system.borrow().clone() else {
                 return;
@@ -193,13 +240,13 @@ fn build_ui(app: &adw::Application) {
             };
             let selected_actions = state.selected.borrow().clone();
             if selected_actions.is_empty() {
-                append_log(&log_view, "No actions selected.");
+                append_log(&log_view, &log_scroller, "No actions selected.");
                 return;
             }
             button.set_sensitive(false);
             progress.pulse();
             progress.set_text(Some("Waiting for authorization"));
-            append_log(&log_view, "Requesting PolicyKit authorization...");
+            append_log(&log_view, &log_scroller, "Requesting PolicyKit authorization...");
             let sender = sender.clone();
             std::thread::spawn(move || {
                 let request = ApplyRequest {
@@ -217,13 +264,20 @@ fn build_ui(app: &adw::Application) {
     window.present();
 }
 
-fn render_actions(group: &adw::PreferencesGroup, state: &UiState, plan: &Plan) {
+fn render_actions(
+    group: &adw::PreferencesGroup,
+    state: &UiState,
+    plan: &Plan,
+    rendered_rows: &Rc<RefCell<Vec<adw::ActionRow>>>,
+) {
     for action in &plan.actions {
         let row = adw::ActionRow::builder()
             .title(&action.title)
             .subtitle(&action_subtitle(action))
             .activatable(true)
             .build();
+        row.set_subtitle_lines(4);
+        row.set_title_lines(2);
         let check = gtk::CheckButton::new();
         check.set_valign(Align::Center);
         check.set_sensitive(!action.already_complete);
@@ -242,6 +296,7 @@ fn render_actions(group: &adw::PreferencesGroup, state: &UiState, plan: &Plan) {
         });
         row.add_prefix(&check);
         group.add(&row);
+        rendered_rows.borrow_mut().push(row);
     }
 }
 
@@ -277,11 +332,15 @@ fn format_system_subtitle(system: &SystemInfo) -> String {
     format!("{gpus} | {secure_boot}")
 }
 
-fn append_log(view: &gtk::TextView, line: &str) {
+fn append_log(view: &gtk::TextView, scroller: &gtk::ScrolledWindow, line: &str) {
     let buffer = view.buffer();
     let mut end = buffer.end_iter();
     buffer.insert(&mut end, line);
     buffer.insert(&mut end, "\n");
+    let adjustment = scroller.vadjustment();
+    glib::idle_add_local_once(move || {
+        adjustment.set_value(adjustment.upper() - adjustment.page_size());
+    });
 }
 
 fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Result<(), String> {

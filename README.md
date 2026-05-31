@@ -42,10 +42,10 @@ cargo build --release
 
 ## RPM
 
-Create a source tarball named `postora-0.1.0.tar.gz`, then build the package with:
+Create a source tarball named `postora-0.1.1.tar.gz`, then build the package with:
 
 ```sh
-tar --exclude=target -czf ~/rpmbuild/SOURCES/postora-0.1.0.tar.gz --transform 's,^,postora-0.1.0/,' .
+tar --exclude=target -czf ~/rpmbuild/SOURCES/postora-0.1.1.tar.gz --transform 's,^,postora-0.1.1/,' .
 rpmbuild -ba packaging/rpm/postora.spec
 ```
 
