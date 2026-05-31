@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashSet};
 use std::ffi::OsStr;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use thiserror::Error;
 use uuid::Uuid;
@@ -323,7 +323,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         description: "Install Zed for the current user using the official zed.dev install script.".into(),
         recommended: false,
         selected_by_default: false,
-        already_complete: command_exists("zed"),
+        already_complete: zed_installed(&current_home_dir()),
         warning: Some("This runs the official installer from zed.dev as your user.".into()),
     });
     actions.push(Action {
@@ -343,7 +343,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         description: "Install zsh and set it as the default shell for the current user.".into(),
         recommended: false,
         selected_by_default: false,
-        already_complete: info.installed_packages.contains("zsh"),
+        already_complete: default_shell_is_zsh(),
         warning: Some("You may need to log out and back in for the default shell change to apply.".into()),
     });
     actions.push(Action {
@@ -353,7 +353,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         description: "Install Starship, enable it for bash and zsh, and apply the Catppuccin Powerline preset.".into(),
         recommended: false,
         selected_by_default: false,
-        already_complete: command_exists("starship"),
+        already_complete: starship_configured(&current_home_dir()),
         warning: Some("This runs the official installer from starship.rs.".into()),
     });
 
@@ -493,7 +493,7 @@ pub fn commands_for_action(
             commands.push(CommandSpec::new("dnf", ["copr", "enable", "-y", "scottames/ghostty"]));
             commands.push(CommandSpec::new("dnf", ["install", "-y", "ghostty"]));
         }
-        ActionId::Zed => {
+        ActionId::Zed if !zed_installed(&current_home_dir()) => {
             commands.extend(user_shell_commands(
                 info,
                 "Install Zed",
@@ -503,7 +503,7 @@ pub fn commands_for_action(
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
             commands.push(CommandSpec::new("dnf", ["install", "-y", "vlc"]));
         }
-        ActionId::ZshDefault => {
+        ActionId::ZshDefault if !default_shell_is_zsh() => {
             if !info.installed_packages.contains("zsh") {
                 commands.push(CommandSpec::new("dnf", ["install", "-y", "zsh"]));
             }
@@ -515,7 +515,7 @@ pub fn commands_for_action(
                 ],
             ));
         }
-        ActionId::Starship => {
+        ActionId::Starship if !starship_configured(&current_home_dir()) => {
             commands.push(CommandSpec::new(
                 "sh",
                 ["-c", "curl -sS https://starship.rs/install.sh | sh -s -- -y"],
@@ -571,6 +571,70 @@ fn nerd_font(action: ActionId) -> Option<NerdFont> {
     nerd_fonts().iter().copied().find(|font| font.id == action)
 }
 
+fn current_home_dir() -> PathBuf {
+    std::env::var_os("POSTORA_TARGET_HOME")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/"))
+}
+
+fn current_user_name() -> Option<String> {
+    std::env::var("POSTORA_TARGET_USER")
+        .ok()
+        .filter(|user| !user.is_empty())
+        .or_else(|| std::env::var("USER").ok().filter(|user| !user.is_empty()))
+        .or_else(|| std::env::var("SUDO_USER").ok().filter(|user| !user.is_empty()))
+}
+
+fn zed_installed(home: &Path) -> bool {
+    [
+        home.join(".local/bin/zed"),
+        home.join(".local/zed.app/bin/zed"),
+        home.join(".local/share/applications/dev.zed.Zed.desktop"),
+        home.join(".local/share/zed"),
+    ]
+    .iter()
+    .any(|path| path.exists())
+}
+
+fn starship_configured(home: &Path) -> bool {
+    let binary = home.join(".cargo/bin/starship");
+    let local_binary = home.join(".local/bin/starship");
+    let usr_binary = Path::new("/usr/local/bin/starship");
+    let config = home.join(".config/starship.toml");
+    let bashrc = home.join(".bashrc");
+    let zshrc = home.join(".zshrc");
+
+    let configured_bash = file_contains(&bashrc, r#"eval "$(starship init bash)""#);
+    let configured_zsh = file_contains(&zshrc, r#"eval "$(starship init zsh)""#);
+
+    (binary.exists() || local_binary.exists() || usr_binary.exists())
+        && config.exists()
+        && configured_bash
+        && configured_zsh
+}
+
+fn default_shell_is_zsh() -> bool {
+    let Some(user) = current_user_name() else {
+        return false;
+    };
+    let passwd_entry = command_output("getent", ["passwd", user.as_str()])
+        .or_else(|| fs::read_to_string("/etc/passwd").ok().and_then(|contents| {
+            contents
+                .lines()
+                .find(|line| line.split(':').next() == Some(user.as_str()))
+                .map(ToOwned::to_owned)
+        }));
+    let Some(entry) = passwd_entry else {
+        return false;
+    };
+    entry.split(':').nth(6).map(|shell| shell.ends_with("/zsh")).unwrap_or(false)
+}
+
+fn file_contains(path: &Path, needle: &str) -> bool {
+    fs::read_to_string(path).map(|content| content.contains(needle)).unwrap_or(false)
+}
+
 fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<CommandSpec> {
     let Some(user) = info_target_user() else {
         return vec![CommandSpec::new(
@@ -589,10 +653,7 @@ fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<Com
 }
 
 fn info_target_user() -> Option<String> {
-    std::env::var("POSTORA_TARGET_USER")
-        .ok()
-        .filter(|user| !user.is_empty())
-        .or_else(|| std::env::var("SUDO_USER").ok().filter(|user| !user.is_empty()))
+    current_user_name()
 }
 
 pub fn commands_for_request(
@@ -788,6 +849,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn base_info(version: u16) -> SystemInfo {
         SystemInfo {
@@ -804,6 +866,14 @@ mod tests {
             enabled_repos: BTreeSet::new(),
             flatpak_remotes: BTreeSet::new(),
         }
+    }
+
+    fn unique_temp_home() -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        std::env::temp_dir().join(format!("postora-test-{suffix}"))
     }
 
     #[test]
@@ -861,5 +931,28 @@ mod tests {
             assert_eq!(commands.len(), 1);
             assert_eq!(commands[0], openh264_command(version));
         }
+    }
+
+    #[test]
+    fn zed_detection_uses_install_directory() {
+        let home = unique_temp_home();
+        fs::create_dir_all(home.join(".local/bin")).unwrap();
+        fs::write(home.join(".local/bin/zed"), "binary").unwrap();
+        assert!(zed_installed(&home));
+        assert!(!zed_installed(&home.join("missing")));
+    }
+
+    #[test]
+    fn starship_detection_requires_config_and_shell_hooks() {
+        let home = unique_temp_home();
+        fs::create_dir_all(home.join(".cargo/bin")).unwrap();
+        fs::create_dir_all(home.join(".config")).unwrap();
+        fs::write(home.join(".cargo/bin/starship"), "binary").unwrap();
+        fs::write(home.join(".config/starship.toml"), "config").unwrap();
+        fs::write(home.join(".bashrc"), r#"eval "$(starship init bash)""#).unwrap();
+        fs::write(home.join(".zshrc"), r#"eval "$(starship init zsh)""#).unwrap();
+        assert!(starship_configured(&home));
+        fs::write(home.join(".zshrc"), "echo hello").unwrap();
+        assert!(!starship_configured(&home));
     }
 }

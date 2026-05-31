@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.1.2
+Version:        0.1.3
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -29,7 +29,7 @@ are performed by a small helper through PolicyKit.
 %autosetup
 
 %build
-cargo build --release
+cargo build --release --offline
 
 %install
 install -Dm0755 target/release/postora %{buildroot}%{_bindir}/postora
@@ -43,7 +43,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.mahbub_khan
 appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %check
-cargo test --workspace
+cargo test --workspace --offline
 
 %files
 %license LICENSE
@@ -56,6 +56,9 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.3-1
+- Refresh installed state after apply and improve completion detection
+
 * Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.2-1
 - Add optional extra app, shell, prompt, and Nerd Font installs
 

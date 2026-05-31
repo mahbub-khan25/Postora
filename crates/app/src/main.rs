@@ -20,6 +20,13 @@ struct UiState {
     system: Rc<RefCell<Option<SystemInfo>>>,
     plan: Rc<RefCell<Option<Plan>>>,
     selected: Rc<RefCell<BTreeSet<ActionId>>>,
+    completed: Rc<RefCell<BTreeSet<ActionId>>>,
+}
+
+#[derive(Clone)]
+struct ActionWidgets {
+    row: adw::ActionRow,
+    check: gtk::CheckButton,
 }
 
 #[derive(Debug)]
@@ -40,6 +47,7 @@ fn build_ui(app: &adw::Application) {
         system: Rc::new(RefCell::new(None)),
         plan: Rc::new(RefCell::new(None)),
         selected: Rc::new(RefCell::new(BTreeSet::new())),
+        completed: Rc::new(RefCell::new(BTreeSet::new())),
     };
 
     let window = adw::ApplicationWindow::builder()
@@ -144,7 +152,8 @@ fn build_ui(app: &adw::Application) {
     window.set_content(Some(&toolbar_view));
 
     let (sender, receiver) = mpsc::channel::<WorkerMessage>();
-    let rendered_action_rows = Rc::new(RefCell::new(Vec::<adw::ActionRow>::new()));
+    let rendered_action_rows = Rc::new(RefCell::new(Vec::<ActionWidgets>::new()));
+    let analysis_sender = sender.clone();
 
     {
         let state = state.clone();
@@ -165,8 +174,16 @@ fn build_ui(app: &adw::Application) {
                         *state.system.borrow_mut() = Some(system.clone());
                         *state.plan.borrow_mut() = Some(plan.clone());
                         state.selected.borrow_mut().clear();
-                        for row in rendered_action_rows.borrow_mut().drain(..) {
-                            action_group.remove(&row);
+                        {
+                            let mut completed = state.completed.borrow_mut();
+                            for action in &plan.actions {
+                                if action.already_complete {
+                                    completed.insert(action.id);
+                                }
+                            }
+                        }
+                        for widget in rendered_action_rows.borrow_mut().drain(..) {
+                            action_group.remove(&widget.row);
                         }
                         if empty_row.parent().is_some() {
                             action_group.remove(&empty_row);
@@ -187,8 +204,8 @@ fn build_ui(app: &adw::Application) {
                         append_log(&log_view, &log_scroller, "Analysis complete.");
                     }
                     WorkerMessage::Analyzed(Err(error)) => {
-                        for row in rendered_action_rows.borrow_mut().drain(..) {
-                            action_group.remove(&row);
+                        for widget in rendered_action_rows.borrow_mut().drain(..) {
+                            action_group.remove(&widget.row);
                         }
                         if empty_row.parent().is_none() {
                             action_group.add(&empty_row);
@@ -207,10 +224,19 @@ fn build_ui(app: &adw::Application) {
                         append_log(&log_view, &log_scroller, &line);
                     }
                     WorkerMessage::ApplyFinished(Ok(())) => {
-                        progress.set_fraction(1.0);
-                        progress.set_text(Some("Finished"));
+                        let selected_actions = state.selected.borrow().clone();
+                        state.selected.borrow_mut().clear();
+                        state.completed.borrow_mut().extend(selected_actions);
+                        for widget in rendered_action_rows.borrow().iter() {
+                            widget.check.set_active(false);
+                        }
+                        progress.pulse();
+                        progress.set_text(Some("Refreshing status"));
                         apply_button.set_sensitive(false);
-                        append_log(&log_view, &log_scroller, "Apply finished.");
+                        status_row.set_title("Refreshing status");
+                        status_row.set_subtitle("Re-analyzing system state after apply.");
+                        append_log(&log_view, &log_scroller, "Apply finished. Refreshing status...");
+                        spawn_analysis(analysis_sender.clone());
                     }
                     WorkerMessage::ApplyFinished(Err(error)) => {
                         progress.set_fraction(0.0);
@@ -233,14 +259,7 @@ fn build_ui(app: &adw::Application) {
             progress.pulse();
             progress.set_text(Some("Analyzing"));
             append_log(&log_view, &log_scroller, "Analyzing system...");
-            let sender = sender.clone();
-            std::thread::spawn(move || {
-                let system = detect_system();
-                let result = build_plan(&system)
-                    .map(|plan| (system, plan))
-                    .map_err(|error| error.to_string());
-                let _ = sender.send(WorkerMessage::Analyzed(result));
-            });
+            spawn_analysis(sender.clone());
         });
     }
 
@@ -291,20 +310,28 @@ fn render_actions(
     fonts_group: &adw::PreferencesGroup,
     state: &UiState,
     plan: &Plan,
-    rendered_rows: &Rc<RefCell<Vec<adw::ActionRow>>>,
+    rendered_rows: &Rc<RefCell<Vec<ActionWidgets>>>,
 ) {
+    let completed_actions = state.completed.borrow().clone();
     for action in &plan.actions {
+        let completed = action.already_complete || completed_actions.contains(&action.id);
         let row = adw::ActionRow::builder()
             .title(&action.title)
-            .subtitle(&action_subtitle(action))
+            .subtitle(&action_subtitle(action, completed))
             .activatable(true)
             .build();
         row.set_subtitle_lines(4);
         row.set_title_lines(2);
+        if completed {
+            let status_label = gtk::Label::new(Some(action_status_label(action)));
+            status_label.add_css_class("dim-label");
+            status_label.set_halign(Align::End);
+            row.add_suffix(&status_label);
+        }
         let check = gtk::CheckButton::new();
         check.set_valign(Align::Center);
-        check.set_sensitive(!action.already_complete);
-        check.set_active(action.selected_by_default && !action.already_complete);
+        check.set_sensitive(!completed);
+        check.set_active(action.selected_by_default && !completed);
         if check.is_active() {
             state.selected.borrow_mut().insert(action.id);
         }
@@ -323,17 +350,28 @@ fn render_actions(
             ActionCategory::ExtraApps => extra_group.add(&row),
             ActionCategory::NerdFonts => fonts_group.add(&row),
         }
-        rendered_rows.borrow_mut().push(row);
+        rendered_rows.borrow_mut().push(ActionWidgets { row, check });
     }
 }
 
-fn action_subtitle(action: &Action) -> String {
-    if action.already_complete {
-        return "Already complete".into();
+fn action_subtitle(action: &Action, completed: bool) -> String {
+    if completed {
+        return action_status_label(action).into();
     }
     match &action.warning {
         Some(warning) => format!("{} {}", action.description, warning),
         None => action.description.clone(),
+    }
+}
+
+fn action_status_label(action: &Action) -> &'static str {
+    match action.category {
+        ActionCategory::FedoraSetup => "Enabled",
+        ActionCategory::ExtraApps => match action.id {
+            ActionId::ZshDefault | ActionId::Starship => "Configured",
+            _ => "Installed",
+        },
+        ActionCategory::NerdFonts => "Installed",
     }
 }
 
@@ -367,6 +405,16 @@ fn append_log(view: &gtk::TextView, scroller: &gtk::ScrolledWindow, line: &str) 
     let adjustment = scroller.vadjustment();
     glib::idle_add_local_once(move || {
         adjustment.set_value(adjustment.upper() - adjustment.page_size());
+    });
+}
+
+fn spawn_analysis(sender: mpsc::Sender<WorkerMessage>) {
+    std::thread::spawn(move || {
+        let system = detect_system();
+        let result = build_plan(&system)
+            .map(|plan| (system, plan))
+            .map_err(|error| error.to_string());
+        let _ = sender.send(WorkerMessage::Analyzed(result));
     });
 }
 
