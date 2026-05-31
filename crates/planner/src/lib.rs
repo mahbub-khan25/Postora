@@ -523,7 +523,7 @@ pub fn commands_for_action(
             commands.extend(user_shell_commands(
                 info,
                 "Configure Starship",
-                r#"mkdir -p "$HOME/.config"; starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; grep -qxF 'eval "$(starship init bash)"' "$HOME/.bashrc" 2>/dev/null || printf '\n%s\n' 'eval "$(starship init bash)"' >> "$HOME/.bashrc"; touch "$HOME/.zshrc"; grep -qxF 'eval "$(starship init zsh)"' "$HOME/.zshrc" 2>/dev/null || printf '\n%s\n' 'eval "$(starship init zsh)"' >> "$HOME/.zshrc"#,
+                r#"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || echo 'eval "$(starship init bash)"' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc"#,
             ));
         }
         action if nerd_font(action).is_some() => {
@@ -666,14 +666,40 @@ pub fn commands_for_request(
     }
     let available: HashSet<ActionId> = build_plan(info)?.actions.into_iter().map(|a| a.id).collect();
     let mut out = Vec::new();
+    let mut repo_configured = false;
     for action in &request.selected_actions {
         if !available.contains(action) {
             return Err(PlannerError::UnavailableAction(*action));
         }
-        for command in commands_for_action(*action, version, info)? {
-            out.push((*action, command));
+        let cmds = commands_for_action(*action, version, info)?;
+        if !cmds.is_empty() {
+            if *action == ActionId::RpmFusionFree
+                || *action == ActionId::RpmFusionNonfree
+                || *action == ActionId::CiscoOpenh264Repo
+            {
+                repo_configured = true;
+            }
+            for command in cmds {
+                out.push((*action, command));
+            }
         }
     }
+
+    if repo_configured {
+        let last_repo_idx = out.iter().rposition(|(action, _)| {
+            *action == ActionId::RpmFusionFree
+                || *action == ActionId::RpmFusionNonfree
+                || *action == ActionId::CiscoOpenh264Repo
+        });
+        if let Some(idx) = last_repo_idx {
+            let action_id = out[idx].0;
+            out.insert(
+                idx + 1,
+                (action_id, CommandSpec::new("dnf", ["update", "-y", "--refresh"])),
+            );
+        }
+    }
+
     Ok(out)
 }
 

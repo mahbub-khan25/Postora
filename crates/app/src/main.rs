@@ -27,6 +27,7 @@ struct UiState {
 struct ActionWidgets {
     row: adw::ActionRow,
     check: gtk::CheckButton,
+    category: ActionCategory,
 }
 
 #[derive(Debug)]
@@ -183,7 +184,11 @@ fn build_ui(app: &adw::Application) {
                             }
                         }
                         for widget in rendered_action_rows.borrow_mut().drain(..) {
-                            action_group.remove(&widget.row);
+                            match widget.category {
+                                ActionCategory::FedoraSetup => action_group.remove(&widget.row),
+                                ActionCategory::ExtraApps => extra_group.remove(&widget.row),
+                                ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
+                            }
                         }
                         if empty_row.parent().is_some() {
                             action_group.remove(&empty_row);
@@ -205,7 +210,11 @@ fn build_ui(app: &adw::Application) {
                     }
                     WorkerMessage::Analyzed(Err(error)) => {
                         for widget in rendered_action_rows.borrow_mut().drain(..) {
-                            action_group.remove(&widget.row);
+                            match widget.category {
+                                ActionCategory::FedoraSetup => action_group.remove(&widget.row),
+                                ActionCategory::ExtraApps => extra_group.remove(&widget.row),
+                                ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
+                            }
                         }
                         if empty_row.parent().is_none() {
                             action_group.add(&empty_row);
@@ -350,7 +359,11 @@ fn render_actions(
             ActionCategory::ExtraApps => extra_group.add(&row),
             ActionCategory::NerdFonts => fonts_group.add(&row),
         }
-        rendered_rows.borrow_mut().push(ActionWidgets { row, check });
+        rendered_rows.borrow_mut().push(ActionWidgets {
+            row,
+            check,
+            category: action.category,
+        });
     }
 }
 

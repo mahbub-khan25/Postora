@@ -23,6 +23,30 @@ fn base_info(version: u16) -> SystemInfo {
 }
 
 #[test]
+fn dnf_update_is_inserted_after_repos() {
+    let info = base_info(42);
+    let request = ApplyRequest {
+        plan_id: Uuid::new_v4(),
+        selected_actions: BTreeSet::from([ActionId::RpmFusionFree, ActionId::Flathub]),
+        detected_fedora_version: 42,
+        detected_gpu_vendors: BTreeSet::new(),
+        target_user: Some("testuser".into()),
+        target_home: Some("/home/testuser".into()),
+    };
+    let commands = commands_for_request(&request, &info).unwrap();
+    let rendered = commands
+        .iter()
+        .map(|(_, command)| command.display())
+        .collect::<Vec<_>>();
+    
+    assert_eq!(rendered.len(), 4);
+    assert!(rendered[0].contains("mirrors.rpmfusion.org"));
+    assert_eq!(rendered[1], "dnf update -y --refresh");
+    assert!(rendered[2].contains("dnf install -y flatpak"));
+    assert!(rendered[3].contains("flatpak remote-add"));
+}
+
+#[test]
 fn command_planner_snapshots_for_fedora_40_to_44() {
     for version in [40, 41, 42, 43, 44] {
         let mut info = base_info(version);
