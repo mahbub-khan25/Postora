@@ -285,7 +285,7 @@ fn append_log(view: &gtk::TextView, line: &str) {
 }
 
 fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Result<(), String> {
-    let helper = std::env::var("FEDORA_POST_SETUP_HELPER").unwrap_or_else(|_| HELPER_PATH.into());
+    let helper = std::env::var("POSTORA_HELPER").unwrap_or_else(|_| HELPER_PATH.into());
     let mut child = Command::new("pkexec")
         .arg(helper)
         .stdin(Stdio::piped())

@@ -14,8 +14,17 @@ Supported v1 tasks:
 
 Atomic Fedora variants such as Silverblue and Kinoite are detected and blocked because they require an rpm-ostree-specific workflow.
 
+## Install
+
+Normal users do not need Rust, Cargo, or development packages to run Postora.
+Download the RPM from the GitHub release page, open it with GNOME Software or KDE Discover, and install it from there.
+
+The RPM installs the app, desktop launcher, PolicyKit helper, icon, and metadata.
+Runtime dependencies are handled by the package manager during installation.
+
 ## Build
 
+These steps are only for developers who want to build Postora from source.
 On Fedora, install build dependencies:
 
 ```sh
@@ -47,4 +56,4 @@ The installed files include:
 - `/usr/share/applications/io.github.mahbub_khan25.Postora.desktop`
 - `/usr/share/polkit-1/actions/io.github.mahbub_khan25.Postora.policy`
 
-For local development, set `FEDORA_POST_SETUP_HELPER` to a helper path before launching the GUI.
+For local development, set `POSTORA_HELPER` to a helper path before launching the GUI.
