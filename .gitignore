@@ -1,0 +1,4 @@
+/target/
+/.rpm-build/
+*.rpm
+*.tar.gz
