@@ -35,6 +35,8 @@ fn command_planner_snapshots_for_fedora_40_to_44() {
             selected_actions,
             detected_fedora_version: version,
             detected_gpu_vendors: info.gpu_vendors.clone(),
+            target_user: Some("testuser".into()),
+            target_home: Some("/home/testuser".into()),
         };
         let commands = commands_for_request(&request, &info).unwrap();
         let rendered = commands
@@ -57,6 +59,8 @@ fn unavailable_gpu_action_is_rejected() {
         selected_actions: BTreeSet::from([ActionId::NvidiaDriver]),
         detected_fedora_version: 42,
         detected_gpu_vendors: BTreeSet::new(),
+        target_user: Some("testuser".into()),
+        target_home: Some("/home/testuser".into()),
     };
     assert!(matches!(
         commands_for_request(&request, &info),
@@ -73,6 +77,8 @@ fn helper_planning_refuses_non_fedora_systems() {
         selected_actions: BTreeSet::from([ActionId::Flathub]),
         detected_fedora_version: 42,
         detected_gpu_vendors: BTreeSet::new(),
+        target_user: Some("testuser".into()),
+        target_home: Some("/home/testuser".into()),
     };
     assert!(matches!(
         commands_for_request(&request, &info),

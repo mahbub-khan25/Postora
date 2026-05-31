@@ -34,6 +34,12 @@ fn run() -> Result<()> {
     emit(&HelperEvent::Started {
         plan_id: &request.plan_id,
     })?;
+    if let Some(user) = &request.target_user {
+        std::env::set_var("POSTORA_TARGET_USER", user);
+    }
+    if let Some(home) = &request.target_home {
+        std::env::set_var("POSTORA_TARGET_HOME", home);
+    }
 
     let info = detect_system();
     let commands = commands_for_request(&request, &info)?;

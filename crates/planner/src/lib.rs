@@ -120,11 +120,35 @@ pub enum ActionId {
     AmdAcceleration,
     IntelAcceleration,
     Flathub,
+    Ghostty,
+    Zed,
+    Vlc,
+    ZshDefault,
+    Starship,
+    FontFiraCode,
+    FontZedMono,
+    FontJetBrainsMono,
+    FontHack,
+    FontMeslo,
+    FontCaskaydiaCove,
+    FontSourceCodePro,
+    FontUbuntuMono,
+    FontRobotoMono,
+    FontIosevka,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionCategory {
+    FedoraSetup,
+    ExtraApps,
+    NerdFonts,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Action {
     pub id: ActionId,
+    pub category: ActionCategory,
     pub title: String,
     pub description: String,
     pub recommended: bool,
@@ -146,6 +170,8 @@ pub struct ApplyRequest {
     pub selected_actions: BTreeSet<ActionId>,
     pub detected_fedora_version: u16,
     pub detected_gpu_vendors: BTreeSet<GpuVendor>,
+    pub target_user: Option<String>,
+    pub target_home: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -176,6 +202,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
 
     actions.push(Action {
         id: ActionId::RpmFusionFree,
+        category: ActionCategory::FedoraSetup,
         title: "RPM Fusion Free".into(),
         description: "Enable the RPM Fusion Free repository for Fedora-compatible packages.".into(),
         recommended: true,
@@ -185,6 +212,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     });
     actions.push(Action {
         id: ActionId::RpmFusionNonfree,
+        category: ActionCategory::FedoraSetup,
         title: "RPM Fusion Nonfree".into(),
         description: "Enable the RPM Fusion Nonfree repository for codecs and vendor drivers.".into(),
         recommended: true,
@@ -194,6 +222,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     });
     actions.push(Action {
         id: ActionId::CiscoOpenh264Repo,
+        category: ActionCategory::FedoraSetup,
         title: "Cisco OpenH264 repository".into(),
         description: "Enable Fedora's Cisco OpenH264 repository.".into(),
         recommended: true,
@@ -203,6 +232,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     });
     actions.push(Action {
         id: ActionId::Openh264Packages,
+        category: ActionCategory::FedoraSetup,
         title: "OpenH264 packages".into(),
         description: "Install GStreamer and Firefox OpenH264 integration packages.".into(),
         recommended: true,
@@ -212,6 +242,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     });
     actions.push(Action {
         id: ActionId::MultimediaCodecs,
+        category: ActionCategory::FedoraSetup,
         title: "Multimedia codecs".into(),
         description: "Install RPM Fusion multimedia packages and replace ffmpeg-free when needed.".into(),
         recommended: true,
@@ -223,6 +254,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     if info.gpu_vendors.contains(&GpuVendor::Nvidia) {
         actions.push(Action {
             id: ActionId::NvidiaDriver,
+            category: ActionCategory::FedoraSetup,
             title: "NVIDIA driver".into(),
             description: "Install RPM Fusion NVIDIA akmod driver and CUDA support package.".into(),
             recommended: true,
@@ -237,6 +269,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     if info.gpu_vendors.contains(&GpuVendor::Amd) {
         actions.push(Action {
             id: ActionId::AmdAcceleration,
+            category: ActionCategory::FedoraSetup,
             title: "AMD media acceleration".into(),
             description: "Install RPM Fusion Mesa VA-API and VDPAU freeworld drivers.".into(),
             recommended: true,
@@ -254,6 +287,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     if info.gpu_vendors.contains(&GpuVendor::Intel) {
         actions.push(Action {
             id: ActionId::IntelAcceleration,
+            category: ActionCategory::FedoraSetup,
             title: "Intel media acceleration".into(),
             description: "Install Intel media driver packages when available.".into(),
             recommended: true,
@@ -264,6 +298,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     }
     actions.push(Action {
         id: ActionId::Flathub,
+        category: ActionCategory::FedoraSetup,
         title: "Flathub".into(),
         description: "Install Flatpak if needed and add the Flathub remote.".into(),
         recommended: true,
@@ -271,6 +306,69 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         already_complete: info.flatpak_remotes.contains("flathub"),
         warning: None,
     });
+    actions.push(Action {
+        id: ActionId::Ghostty,
+        category: ActionCategory::ExtraApps,
+        title: "Ghostty terminal".into(),
+        description: "Enable the scottames/ghostty COPR repository and install Ghostty.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("ghostty"),
+        warning: Some("This enables a third-party COPR repository.".into()),
+    });
+    actions.push(Action {
+        id: ActionId::Zed,
+        category: ActionCategory::ExtraApps,
+        title: "Zed editor".into(),
+        description: "Install Zed for the current user using the official zed.dev install script.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: command_exists("zed"),
+        warning: Some("This runs the official installer from zed.dev as your user.".into()),
+    });
+    actions.push(Action {
+        id: ActionId::Vlc,
+        category: ActionCategory::ExtraApps,
+        title: "VLC media player".into(),
+        description: "Install VLC. This usually requires RPM Fusion to be enabled first.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("vlc"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::ZshDefault,
+        category: ActionCategory::ExtraApps,
+        title: "Zsh as default shell".into(),
+        description: "Install zsh and set it as the default shell for the current user.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("zsh"),
+        warning: Some("You may need to log out and back in for the default shell change to apply.".into()),
+    });
+    actions.push(Action {
+        id: ActionId::Starship,
+        category: ActionCategory::ExtraApps,
+        title: "Starship prompt".into(),
+        description: "Install Starship, enable it for bash and zsh, and apply the Catppuccin Powerline preset.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: command_exists("starship"),
+        warning: Some("This runs the official installer from starship.rs.".into()),
+    });
+
+    for font in nerd_fonts() {
+        actions.push(Action {
+            id: font.id,
+            category: ActionCategory::NerdFonts,
+            title: font.title.into(),
+            description: format!("Install the {} Nerd Font from the Nerd Fonts v3.4.0 release.", font.title),
+            recommended: false,
+            selected_by_default: false,
+            already_complete: Path::new(&format!("/usr/local/share/fonts/postora/{}", font.asset_slug)).exists(),
+            warning: None,
+        });
+    }
 
     Ok(Plan {
         plan_id: Uuid::new_v4(),
@@ -390,9 +488,111 @@ pub fn commands_for_action(
                 ],
             ));
         }
+        ActionId::Ghostty if !info.installed_packages.contains("ghostty") => {
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "dnf-plugins-core"]));
+            commands.push(CommandSpec::new("dnf", ["copr", "enable", "-y", "scottames/ghostty"]));
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "ghostty"]));
+        }
+        ActionId::Zed => {
+            commands.extend(user_shell_commands(
+                info,
+                "Install Zed",
+                "curl -f https://zed.dev/install.sh | sh",
+            ));
+        }
+        ActionId::Vlc if !info.installed_packages.contains("vlc") => {
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "vlc"]));
+        }
+        ActionId::ZshDefault => {
+            if !info.installed_packages.contains("zsh") {
+                commands.push(CommandSpec::new("dnf", ["install", "-y", "zsh"]));
+            }
+            commands.push(CommandSpec::new(
+                "sh",
+                [
+                    "-c",
+                    r#"user="${POSTORA_TARGET_USER:-${SUDO_USER:-}}"; if [ -n "$user" ]; then chsh -s /usr/bin/zsh "$user"; else echo "No target user was provided for chsh" >&2; exit 1; fi"#,
+                ],
+            ));
+        }
+        ActionId::Starship => {
+            commands.push(CommandSpec::new(
+                "sh",
+                ["-c", "curl -sS https://starship.rs/install.sh | sh -s -- -y"],
+            ));
+            commands.extend(user_shell_commands(
+                info,
+                "Configure Starship",
+                r#"mkdir -p "$HOME/.config"; starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; grep -qxF 'eval "$(starship init bash)"' "$HOME/.bashrc" 2>/dev/null || printf '\n%s\n' 'eval "$(starship init bash)"' >> "$HOME/.bashrc"; touch "$HOME/.zshrc"; grep -qxF 'eval "$(starship init zsh)"' "$HOME/.zshrc" 2>/dev/null || printf '\n%s\n' 'eval "$(starship init zsh)"' >> "$HOME/.zshrc"#,
+            ));
+        }
+        action if nerd_font(action).is_some() => {
+            let font = nerd_font(action).expect("font action exists");
+            let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
+            let archive = format!("/tmp/postora-{}.zip", font.asset_slug);
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "curl", "unzip", "fontconfig"]));
+            commands.push(CommandSpec::new(
+                "curl",
+                ["-fL", "-o", archive.as_str(), font.url],
+            ));
+            commands.push(CommandSpec::new("install", ["-d", "-m", "0755", destination.as_str()]));
+            commands.push(CommandSpec::new("unzip", ["-o", archive.as_str(), "-d", destination.as_str()]));
+            commands.push(CommandSpec::new("fc-cache", ["-f", destination.as_str()]));
+        }
         _ => {}
     }
     Ok(commands)
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct NerdFont {
+    pub id: ActionId,
+    pub title: &'static str,
+    pub asset_slug: &'static str,
+    pub url: &'static str,
+}
+
+pub fn nerd_fonts() -> &'static [NerdFont] {
+    &[
+        NerdFont { id: ActionId::FontFiraCode, title: "FiraCode", asset_slug: "FiraCode", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip" },
+        NerdFont { id: ActionId::FontZedMono, title: "ZedMono", asset_slug: "ZedMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/ZedMono.zip" },
+        NerdFont { id: ActionId::FontJetBrainsMono, title: "JetBrainsMono", asset_slug: "JetBrainsMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip" },
+        NerdFont { id: ActionId::FontHack, title: "Hack", asset_slug: "Hack", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Hack.zip" },
+        NerdFont { id: ActionId::FontMeslo, title: "Meslo", asset_slug: "Meslo", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Meslo.zip" },
+        NerdFont { id: ActionId::FontCaskaydiaCove, title: "CaskaydiaCove", asset_slug: "CaskaydiaCove", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/CaskaydiaCove.zip" },
+        NerdFont { id: ActionId::FontSourceCodePro, title: "SourceCodePro", asset_slug: "SourceCodePro", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/SourceCodePro.zip" },
+        NerdFont { id: ActionId::FontUbuntuMono, title: "UbuntuMono", asset_slug: "UbuntuMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/UbuntuMono.zip" },
+        NerdFont { id: ActionId::FontRobotoMono, title: "RobotoMono", asset_slug: "RobotoMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/RobotoMono.zip" },
+        NerdFont { id: ActionId::FontIosevka, title: "Iosevka", asset_slug: "Iosevka", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Iosevka.zip" },
+    ]
+}
+
+fn nerd_font(action: ActionId) -> Option<NerdFont> {
+    nerd_fonts().iter().copied().find(|font| font.id == action)
+}
+
+fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<CommandSpec> {
+    let Some(user) = info_target_user() else {
+        return vec![CommandSpec::new(
+            "sh",
+            ["-c", &format!("echo 'No target user was provided for {label}' >&2; exit 1")],
+        )];
+    };
+    let home = std::env::var("POSTORA_TARGET_HOME")
+        .ok()
+        .filter(|home| !home.is_empty())
+        .unwrap_or_else(|| format!("/home/{user}"));
+    vec![CommandSpec::new(
+        "runuser",
+        ["-u", user.as_str(), "--", "sh", "-lc", &format!("export HOME='{}'; {}", home.replace('\'', "'\\''"), script)],
+    )]
+}
+
+fn info_target_user() -> Option<String> {
+    std::env::var("POSTORA_TARGET_USER")
+        .ok()
+        .filter(|user| !user.is_empty())
+        .or_else(|| std::env::var("SUDO_USER").ok().filter(|user| !user.is_empty()))
 }
 
 pub fn commands_for_request(

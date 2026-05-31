@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,9 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.2-1
+- Add optional extra app, shell, prompt, and Nerd Font installs
+
 * Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.1-1
 - Improve scrolling and log layout
 

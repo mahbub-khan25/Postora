@@ -11,6 +11,9 @@ Supported v1 tasks:
 - NVIDIA driver packages when NVIDIA hardware is detected
 - AMD and Intel media acceleration packages when matching hardware is detected
 - Flathub remote setup
+- Optional apps: Ghostty, Zed, VLC
+- Optional shell setup: zsh as default shell and Starship with the Catppuccin Powerline preset
+- Optional Nerd Fonts: FiraCode, ZedMono, JetBrainsMono, Hack, Meslo, CaskaydiaCove, SourceCodePro, UbuntuMono, RobotoMono, and Iosevka
 
 Atomic Fedora variants such as Silverblue and Kinoite are detected and blocked because they require an rpm-ostree-specific workflow.
 
@@ -42,10 +45,10 @@ cargo build --release
 
 ## RPM
 
-Create a source tarball named `postora-0.1.1.tar.gz`, then build the package with:
+Create a source tarball named `postora-0.1.2.tar.gz`, then build the package with:
 
 ```sh
-tar --exclude=target -czf ~/rpmbuild/SOURCES/postora-0.1.1.tar.gz --transform 's,^,postora-0.1.1/,' .
+tar --exclude=target -czf ~/rpmbuild/SOURCES/postora-0.1.2.tar.gz --transform 's,^,postora-0.1.2/,' .
 rpmbuild -ba packaging/rpm/postora.spec
 ```
 

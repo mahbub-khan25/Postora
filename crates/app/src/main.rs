@@ -1,6 +1,6 @@
 use adw::prelude::*;
 use postora_planner::{
-    build_plan, detect_system, Action, ActionId, ApplyRequest, Plan, SecureBootState, SystemInfo,
+    build_plan, detect_system, Action, ActionCategory, ActionId, ApplyRequest, Plan, SecureBootState, SystemInfo,
 };
 use gtk::glib;
 use gtk::{Align, Orientation, PolicyType, WrapMode};
@@ -58,11 +58,19 @@ fn build_ui(app: &adw::Application) {
         .build();
     status_group.add(&status_row);
 
-    let action_group = adw::PreferencesGroup::builder().title("Optional Changes").build();
+    let action_group = adw::PreferencesGroup::builder().title("Fedora Setup").build();
     let empty_row = adw::ActionRow::builder()
         .title("Analyze system to see available actions")
         .build();
     action_group.add(&empty_row);
+    let extra_group = adw::PreferencesGroup::builder()
+        .title("Extra Apps")
+        .description("Optional application and shell setup.")
+        .build();
+    let fonts_group = adw::PreferencesGroup::builder()
+        .title("Nerd Fonts")
+        .description("Select one or more developer fonts to install system-wide.")
+        .build();
 
     let progress = gtk::ProgressBar::new();
     progress.set_hexpand(true);
@@ -99,6 +107,8 @@ fn build_ui(app: &adw::Application) {
     page.set_margin_end(18);
     page.append(&status_group);
     page.append(&action_group);
+    page.append(&extra_group);
+    page.append(&fonts_group);
     page.append(&log_expander);
 
     let content_scroller = gtk::ScrolledWindow::builder()
@@ -140,6 +150,8 @@ fn build_ui(app: &adw::Application) {
         let state = state.clone();
         let status_row = status_row.clone();
         let action_group = action_group.clone();
+        let extra_group = extra_group.clone();
+        let fonts_group = fonts_group.clone();
         let empty_row = empty_row.clone();
         let progress = progress.clone();
         let apply_button = apply_button.clone();
@@ -159,7 +171,14 @@ fn build_ui(app: &adw::Application) {
                         if empty_row.parent().is_some() {
                             action_group.remove(&empty_row);
                         }
-                        render_actions(&action_group, &state, &plan, &rendered_action_rows);
+                        render_actions(
+                            &action_group,
+                            &extra_group,
+                            &fonts_group,
+                            &state,
+                            &plan,
+                            &rendered_action_rows,
+                        );
                         status_row.set_title(&format_system_title(&system));
                         status_row.set_subtitle(&format_system_subtitle(&system));
                         progress.set_fraction(0.0);
@@ -254,6 +273,8 @@ fn build_ui(app: &adw::Application) {
                     selected_actions,
                     detected_fedora_version: plan.fedora_version,
                     detected_gpu_vendors: system.gpu_vendors,
+                    target_user: std::env::var("USER").ok(),
+                    target_home: std::env::var("HOME").ok(),
                 };
                 let result = run_helper(request, sender.clone());
                 let _ = sender.send(WorkerMessage::ApplyFinished(result));
@@ -265,7 +286,9 @@ fn build_ui(app: &adw::Application) {
 }
 
 fn render_actions(
-    group: &adw::PreferencesGroup,
+    setup_group: &adw::PreferencesGroup,
+    extra_group: &adw::PreferencesGroup,
+    fonts_group: &adw::PreferencesGroup,
     state: &UiState,
     plan: &Plan,
     rendered_rows: &Rc<RefCell<Vec<adw::ActionRow>>>,
@@ -295,7 +318,11 @@ fn render_actions(
             }
         });
         row.add_prefix(&check);
-        group.add(&row);
+        match action.category {
+            ActionCategory::FedoraSetup => setup_group.add(&row),
+            ActionCategory::ExtraApps => extra_group.add(&row),
+            ActionCategory::NerdFonts => fonts_group.add(&row),
+        }
         rendered_rows.borrow_mut().push(row);
     }
 }
