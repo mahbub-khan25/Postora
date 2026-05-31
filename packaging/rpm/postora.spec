@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.1.3
+Version:        0.1.4
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,9 @@ cargo test --workspace --offline
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.4-1
+- Include 19 Flatpak apps in different categories: Web Browsers, Development, Office, Media, Utilities
+
 * Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.3-1
 - Refresh installed state after apply and improve completion detection
 

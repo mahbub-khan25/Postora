@@ -72,6 +72,26 @@ fn build_ui(app: &adw::Application) {
         .title("Analyze system to see available actions")
         .build();
     action_group.add(&empty_row);
+    let browsers_group = adw::PreferencesGroup::builder()
+        .title("Web Browsers")
+        .description("Install Flatpak web browsers.")
+        .build();
+    let dev_group = adw::PreferencesGroup::builder()
+        .title("Development & Database")
+        .description("Install development and database tools.")
+        .build();
+    let office_group = adw::PreferencesGroup::builder()
+        .title("Office & Productivity")
+        .description("Install office suite and note-taking apps.")
+        .build();
+    let creative_group = adw::PreferencesGroup::builder()
+        .title("Media & Creative")
+        .description("Install multimedia players, recording, and editor tools.")
+        .build();
+    let utilities_group = adw::PreferencesGroup::builder()
+        .title("Utilities & Tools")
+        .description("Install system utilities and helper tools.")
+        .build();
     let extra_group = adw::PreferencesGroup::builder()
         .title("Extra Apps")
         .description("Optional application and shell setup.")
@@ -116,6 +136,11 @@ fn build_ui(app: &adw::Application) {
     page.set_margin_end(18);
     page.append(&status_group);
     page.append(&action_group);
+    page.append(&browsers_group);
+    page.append(&dev_group);
+    page.append(&office_group);
+    page.append(&creative_group);
+    page.append(&utilities_group);
     page.append(&extra_group);
     page.append(&fonts_group);
     page.append(&log_expander);
@@ -188,6 +213,11 @@ fn build_ui(app: &adw::Application) {
                                 ActionCategory::FedoraSetup => action_group.remove(&widget.row),
                                 ActionCategory::ExtraApps => extra_group.remove(&widget.row),
                                 ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
+                                ActionCategory::WebBrowsers => browsers_group.remove(&widget.row),
+                                ActionCategory::DevDatabase => dev_group.remove(&widget.row),
+                                ActionCategory::OfficeProductivity => office_group.remove(&widget.row),
+                                ActionCategory::MediaCreative => creative_group.remove(&widget.row),
+                                ActionCategory::UtilitiesTools => utilities_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_some() {
@@ -197,6 +227,11 @@ fn build_ui(app: &adw::Application) {
                             &action_group,
                             &extra_group,
                             &fonts_group,
+                            &browsers_group,
+                            &dev_group,
+                            &office_group,
+                            &creative_group,
+                            &utilities_group,
                             &state,
                             &plan,
                             &rendered_action_rows,
@@ -214,6 +249,11 @@ fn build_ui(app: &adw::Application) {
                                 ActionCategory::FedoraSetup => action_group.remove(&widget.row),
                                 ActionCategory::ExtraApps => extra_group.remove(&widget.row),
                                 ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
+                                ActionCategory::WebBrowsers => browsers_group.remove(&widget.row),
+                                ActionCategory::DevDatabase => dev_group.remove(&widget.row),
+                                ActionCategory::OfficeProductivity => office_group.remove(&widget.row),
+                                ActionCategory::MediaCreative => creative_group.remove(&widget.row),
+                                ActionCategory::UtilitiesTools => utilities_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_none() {
@@ -317,6 +357,11 @@ fn render_actions(
     setup_group: &adw::PreferencesGroup,
     extra_group: &adw::PreferencesGroup,
     fonts_group: &adw::PreferencesGroup,
+    browsers_group: &adw::PreferencesGroup,
+    dev_group: &adw::PreferencesGroup,
+    office_group: &adw::PreferencesGroup,
+    creative_group: &adw::PreferencesGroup,
+    utilities_group: &adw::PreferencesGroup,
     state: &UiState,
     plan: &Plan,
     rendered_rows: &Rc<RefCell<Vec<ActionWidgets>>>,
@@ -358,6 +403,11 @@ fn render_actions(
             ActionCategory::FedoraSetup => setup_group.add(&row),
             ActionCategory::ExtraApps => extra_group.add(&row),
             ActionCategory::NerdFonts => fonts_group.add(&row),
+            ActionCategory::WebBrowsers => browsers_group.add(&row),
+            ActionCategory::DevDatabase => dev_group.add(&row),
+            ActionCategory::OfficeProductivity => office_group.add(&row),
+            ActionCategory::MediaCreative => creative_group.add(&row),
+            ActionCategory::UtilitiesTools => utilities_group.add(&row),
         }
         rendered_rows.borrow_mut().push(ActionWidgets {
             row,
@@ -385,6 +435,11 @@ fn action_status_label(action: &Action) -> &'static str {
             _ => "Installed",
         },
         ActionCategory::NerdFonts => "Installed",
+        ActionCategory::WebBrowsers
+        | ActionCategory::DevDatabase
+        | ActionCategory::OfficeProductivity
+        | ActionCategory::MediaCreative
+        | ActionCategory::UtilitiesTools => "Installed",
     }
 }
 

@@ -19,6 +19,7 @@ fn base_info(version: u16) -> SystemInfo {
         installed_packages: BTreeSet::new(),
         enabled_repos: BTreeSet::new(),
         flatpak_remotes: BTreeSet::new(),
+        flatpak_apps: BTreeSet::new(),
     }
 }
 

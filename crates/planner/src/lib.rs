@@ -39,6 +39,7 @@ pub struct SystemInfo {
     pub installed_packages: BTreeSet<String>,
     pub enabled_repos: BTreeSet<String>,
     pub flatpak_remotes: BTreeSet<String>,
+    pub flatpak_apps: BTreeSet<String>,
 }
 
 impl SystemInfo {
@@ -135,6 +136,24 @@ pub enum ActionId {
     FontUbuntuMono,
     FontRobotoMono,
     FontIosevka,
+    FlatpakChrome,
+    FlatpakFirefox,
+    FlatpakBrave,
+    FlatpakZed,
+    FlatpakPodmanDesktop,
+    FlatpakDbeaver,
+    FlatpakPostman,
+    FlatpakOnlyOffice,
+    FlatpakObsidian,
+    FlatpakBitwarden,
+    FlatpakVlc,
+    FlatpakObsStudio,
+    FlatpakGimp,
+    FlatpakKdenlive,
+    FlatpakLocalSend,
+    FlatpakFlameshot,
+    FlatpakFlatseal,
+    FlatpakBottles,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -143,6 +162,11 @@ pub enum ActionCategory {
     FedoraSetup,
     ExtraApps,
     NerdFonts,
+    WebBrowsers,
+    DevDatabase,
+    OfficeProductivity,
+    MediaCreative,
+    UtilitiesTools,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -357,6 +381,196 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         warning: Some("This runs the official installer from starship.rs.".into()),
     });
 
+    // Web Browsers
+    actions.push(Action {
+        id: ActionId::FlatpakChrome,
+        category: ActionCategory::WebBrowsers,
+        title: "Google Chrome".into(),
+        description: "Install Google Chrome web browser.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.google.Chrome"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakFirefox,
+        category: ActionCategory::WebBrowsers,
+        title: "Firefox (Flatpak)".into(),
+        description: "Install Mozilla Firefox web browser.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.mozilla.firefox"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakBrave,
+        category: ActionCategory::WebBrowsers,
+        title: "Brave Browser".into(),
+        description: "Install Brave web browser.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.brave.Browser"),
+        warning: None,
+    });
+
+    // Development & Database
+    actions.push(Action {
+        id: ActionId::FlatpakZed,
+        category: ActionCategory::DevDatabase,
+        title: "Zed IDE (Flatpak)".into(),
+        description: "Install Zed developer IDE.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("dev.zed.Zed"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakPodmanDesktop,
+        category: ActionCategory::DevDatabase,
+        title: "Podman Desktop".into(),
+        description: "Install Podman Desktop container tool.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("io.podman_desktop.PodmanDesktop"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakDbeaver,
+        category: ActionCategory::DevDatabase,
+        title: "DBeaver Community".into(),
+        description: "Install DBeaver Community database manager.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("io.dbeaver.DBeaverCommunity"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakPostman,
+        category: ActionCategory::DevDatabase,
+        title: "Postman".into(),
+        description: "Install Postman API platform client.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.getpostman.Postman"),
+        warning: None,
+    });
+
+    // Office & Productivity
+    actions.push(Action {
+        id: ActionId::FlatpakOnlyOffice,
+        category: ActionCategory::OfficeProductivity,
+        title: "OnlyOffice".into(),
+        description: "Install OnlyOffice desktop editors.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.onlyoffice.desktopeditors"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakObsidian,
+        category: ActionCategory::OfficeProductivity,
+        title: "Obsidian".into(),
+        description: "Install Obsidian knowledge base app.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("md.obsidian.Obsidian"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakBitwarden,
+        category: ActionCategory::OfficeProductivity,
+        title: "Bitwarden (Flatpak)".into(),
+        description: "Install Bitwarden password manager desktop client.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.bitwarden.desktop"),
+        warning: None,
+    });
+
+    // Media & Creative
+    actions.push(Action {
+        id: ActionId::FlatpakVlc,
+        category: ActionCategory::MediaCreative,
+        title: "VLC Media Player (Flatpak)".into(),
+        description: "Install VLC media player.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.videolan.VLC"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakObsStudio,
+        category: ActionCategory::MediaCreative,
+        title: "OBS Studio".into(),
+        description: "Install OBS Studio for live streaming and recording.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.obsproject.Studio"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakGimp,
+        category: ActionCategory::MediaCreative,
+        title: "GIMP (Flatpak)".into(),
+        description: "Install GNU Image Manipulation Program.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.gimp.GIMP"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakKdenlive,
+        category: ActionCategory::MediaCreative,
+        title: "Kdenlive (Flatpak)".into(),
+        description: "Install Kdenlive video editor.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.kde.kdenlive"),
+        warning: None,
+    });
+
+    // Utilities & Tools
+    actions.push(Action {
+        id: ActionId::FlatpakLocalSend,
+        category: ActionCategory::UtilitiesTools,
+        title: "LocalSend".into(),
+        description: "Install LocalSend file sharing tool.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.localsend.localsend_app"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakFlameshot,
+        category: ActionCategory::UtilitiesTools,
+        title: "Flameshot (Flatpak)".into(),
+        description: "Install Flameshot screenshot tool.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("org.flameshot.Flameshot"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakFlatseal,
+        category: ActionCategory::UtilitiesTools,
+        title: "Flatseal".into(),
+        description: "Install Flatseal Flatpak permission manager.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.github.tchx84.Flatseal"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakBottles,
+        category: ActionCategory::UtilitiesTools,
+        title: "Bottles".into(),
+        description: "Install Bottles for running Windows software.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.flatpak_apps.contains("com.usebottles.bottles"),
+        warning: None,
+    });
+
     for font in nerd_fonts() {
         actions.push(Action {
             id: font.id,
@@ -526,6 +740,24 @@ pub fn commands_for_action(
                 r#"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || echo 'eval "$(starship init bash)"' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc"#,
             ));
         }
+        ActionId::FlatpakChrome => commands.extend(flatpak_install_commands("com.google.Chrome", info)),
+        ActionId::FlatpakFirefox => commands.extend(flatpak_install_commands("org.mozilla.firefox", info)),
+        ActionId::FlatpakBrave => commands.extend(flatpak_install_commands("com.brave.Browser", info)),
+        ActionId::FlatpakZed => commands.extend(flatpak_install_commands("dev.zed.Zed", info)),
+        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_install_commands("io.podman_desktop.PodmanDesktop", info)),
+        ActionId::FlatpakDbeaver => commands.extend(flatpak_install_commands("io.dbeaver.DBeaverCommunity", info)),
+        ActionId::FlatpakPostman => commands.extend(flatpak_install_commands("com.getpostman.Postman", info)),
+        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_install_commands("org.onlyoffice.desktopeditors", info)),
+        ActionId::FlatpakObsidian => commands.extend(flatpak_install_commands("md.obsidian.Obsidian", info)),
+        ActionId::FlatpakBitwarden => commands.extend(flatpak_install_commands("com.bitwarden.desktop", info)),
+        ActionId::FlatpakVlc => commands.extend(flatpak_install_commands("org.videolan.VLC", info)),
+        ActionId::FlatpakObsStudio => commands.extend(flatpak_install_commands("com.obsproject.Studio", info)),
+        ActionId::FlatpakGimp => commands.extend(flatpak_install_commands("org.gimp.GIMP", info)),
+        ActionId::FlatpakKdenlive => commands.extend(flatpak_install_commands("org.kde.kdenlive", info)),
+        ActionId::FlatpakLocalSend => commands.extend(flatpak_install_commands("org.localsend.localsend_app", info)),
+        ActionId::FlatpakFlameshot => commands.extend(flatpak_install_commands("org.flameshot.Flameshot", info)),
+        ActionId::FlatpakFlatseal => commands.extend(flatpak_install_commands("com.github.tchx84.Flatseal", info)),
+        ActionId::FlatpakBottles => commands.extend(flatpak_install_commands("com.usebottles.bottles", info)),
         action if nerd_font(action).is_some() => {
             let font = nerd_font(action).expect("font action exists");
             let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
@@ -742,6 +974,7 @@ pub fn detect_system() -> SystemInfo {
         installed_packages: installed_packages(),
         enabled_repos: enabled_repos(),
         flatpak_remotes: flatpak_remotes(),
+        flatpak_apps: flatpak_apps(),
     }
 }
 
@@ -839,6 +1072,36 @@ fn flatpak_remotes() -> BTreeSet<String> {
         .collect()
 }
 
+fn flatpak_apps() -> BTreeSet<String> {
+    command_output("flatpak", ["list", "--columns=application"])
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|s| !s.is_empty() && *s != "Application")
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+fn flatpak_install_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec> {
+    let mut commands = Vec::new();
+    if !info.flatpak_remotes.contains("flathub") {
+        if !info.installed_packages.contains("flatpak") {
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "flatpak"]));
+        }
+        commands.push(CommandSpec::new(
+            "flatpak",
+            [
+                "remote-add",
+                "--if-not-exists",
+                "flathub",
+                "https://dl.flathub.org/repo/flathub.flatpakrepo",
+            ],
+        ));
+    }
+    commands.push(CommandSpec::new("flatpak", ["install", "-y", "flathub", app_id]));
+    commands
+}
+
 fn command_exists(program: &str) -> bool {
     Command::new("sh")
         .arg("-c")
@@ -891,6 +1154,7 @@ mod tests {
             installed_packages: BTreeSet::new(),
             enabled_repos: BTreeSet::new(),
             flatpak_remotes: BTreeSet::new(),
+            flatpak_apps: BTreeSet::new(),
         }
     }
 
