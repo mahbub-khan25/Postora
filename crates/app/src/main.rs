@@ -127,11 +127,23 @@ fn build_ui(app: &adw::Application) {
         .vexpand(true)
         .child(&log_view)
         .build();
-    let log_expander = gtk::Expander::builder()
+    let log_panel = gtk::Box::new(Orientation::Vertical, 6);
+    log_panel.set_margin_start(18);
+    log_panel.set_margin_end(18);
+    log_panel.set_margin_bottom(12);
+
+    let separator = gtk::Separator::new(Orientation::Horizontal);
+    separator.set_margin_bottom(6);
+
+    let log_title = gtk::Label::builder()
         .label("Logs")
-        .expanded(false)
-        .child(&log_scroller)
+        .halign(Align::Start)
         .build();
+    log_title.add_css_class("heading");
+
+    log_panel.append(&separator);
+    log_panel.append(&log_title);
+    log_panel.append(&log_scroller);
 
     let setup_page = gtk::Box::new(Orientation::Vertical, 12);
     setup_page.set_margin_top(18);
@@ -195,7 +207,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.1.9")
+                .version("0.2.0")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
@@ -223,14 +235,18 @@ fn build_ui(app: &adw::Application) {
     footer.append(&progress);
     footer.append(&button_box);
 
-    let root = gtk::Box::new(Orientation::Vertical, 0);
-    
-    log_expander.set_margin_start(18);
-    log_expander.set_margin_end(18);
-    log_expander.set_margin_bottom(12);
+    let paned = gtk::Paned::new(Orientation::Vertical);
+    paned.set_vexpand(true);
+    paned.set_start_child(Some(&view_stack));
+    paned.set_resize_start_child(true);
+    paned.set_shrink_start_child(false);
+    paned.set_end_child(Some(&log_panel));
+    paned.set_resize_end_child(true);
+    paned.set_shrink_end_child(false);
+    paned.set_position(440);
 
-    root.append(&view_stack);
-    root.append(&log_expander);
+    let root = gtk::Box::new(Orientation::Vertical, 0);
+    root.append(&paned);
     root.append(&footer);
 
     let toolbar_view = adw::ToolbarView::new();
@@ -255,7 +271,8 @@ fn build_ui(app: &adw::Application) {
         let log_scroller = log_scroller.clone();
         let rendered_action_rows = rendered_action_rows.clone();
         let window_clone = window.clone();
-        let log_expander_clone = log_expander.clone();
+        let view_stack_clone = view_stack.clone();
+        let analyze_button_clone = analyze_button.clone();
         glib::timeout_add_local(Duration::from_millis(100), move || {
             for message in receiver.try_iter() {
                 match message {
@@ -304,6 +321,9 @@ fn build_ui(app: &adw::Application) {
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Analysis complete"));
                         apply_button.set_sensitive(plan.actions.iter().any(|action| !action.already_complete));
+                        analyze_button_clone.set_sensitive(true);
+                        view_stack_clone.set_sensitive(true);
+                        window_clone.set_cursor(None);
                         append_log(&log_view, &log_scroller, "Analysis complete.");
                     }
                     WorkerMessage::Analyzed(Err(error)) => {
@@ -328,10 +348,12 @@ fn build_ui(app: &adw::Application) {
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Analysis failed"));
                         apply_button.set_sensitive(false);
+                        analyze_button_clone.set_sensitive(true);
+                        view_stack_clone.set_sensitive(true);
+                        window_clone.set_cursor(None);
                         append_log(&log_view, &log_scroller, &format!("Analysis failed: {error}"));
                     }
                     WorkerMessage::HelperLine(line) => {
-                        log_expander_clone.set_expanded(true);
                         progress.pulse();
                         progress.set_text(Some("Applying changes"));
                         append_log(&log_view, &log_scroller, &line);
@@ -346,17 +368,19 @@ fn build_ui(app: &adw::Application) {
                         progress.pulse();
                         progress.set_text(Some("Refreshing status"));
                         apply_button.set_sensitive(false);
+                        analyze_button_clone.set_sensitive(true);
+                        view_stack_clone.set_sensitive(true);
+                        window_clone.set_cursor(None);
                         status_row.set_title("Refreshing status");
                         status_row.set_subtitle("Re-analyzing system state after apply.");
                         append_log(&log_view, &log_scroller, "Apply finished. Refreshing status...");
-                        log_expander_clone.set_expanded(true);
-
+ 
                         let needs_restart = (is_update && has_updates)
                             || applied_actions.contains(&ActionId::NvidiaDriver)
                             || applied_actions.contains(&ActionId::AmdAcceleration)
                             || applied_actions.contains(&ActionId::IntelAcceleration)
                             || applied_actions.contains(&ActionId::ZshDefault);
-
+ 
                         if needs_restart {
                             let dialog = adw::MessageDialog::builder()
                                 .transient_for(&window_clone)
@@ -370,14 +394,16 @@ fn build_ui(app: &adw::Application) {
                             });
                             dialog.present();
                         }
-
+ 
                         spawn_analysis(analysis_sender.clone());
                     }
                     WorkerMessage::ApplyFinished { result: Err(error), .. } => {
-                        log_expander_clone.set_expanded(true);
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Apply failed"));
                         apply_button.set_sensitive(true);
+                        analyze_button_clone.set_sensitive(true);
+                        view_stack_clone.set_sensitive(true);
+                        window_clone.set_cursor(None);
                         append_log(&log_view, &log_scroller, &format!("Apply failed: {error}"));
                     }
                 }
@@ -385,13 +411,22 @@ fn build_ui(app: &adw::Application) {
             glib::ControlFlow::Continue
         });
     }
-
+ 
     {
         let sender = sender.clone();
         let progress = progress.clone();
         let log_view = log_view.clone();
         let log_scroller = log_scroller.clone();
-        analyze_button.connect_clicked(move |_| {
+        let apply_button_clone = apply_button.clone();
+        let view_stack_clone = view_stack.clone();
+        let window_clone = window.clone();
+        analyze_button.connect_clicked(move |btn| {
+            btn.set_sensitive(false);
+            apply_button_clone.set_sensitive(false);
+            view_stack_clone.set_sensitive(false);
+            let wait_cursor = gtk::gdk::Cursor::from_name("wait", None);
+            window_clone.set_cursor(wait_cursor.as_ref());
+ 
             progress.pulse();
             progress.set_text(Some("Waiting for authorization"));
             append_log(&log_view, &log_scroller, "Starting system update before analysis...");
@@ -429,13 +464,16 @@ fn build_ui(app: &adw::Application) {
             });
         });
     }
-
+ 
     {
         let state = state.clone();
         let sender = sender.clone();
         let progress = progress.clone();
         let log_view = log_view.clone();
         let log_scroller = log_scroller.clone();
+        let analyze_button_clone = analyze_button.clone();
+        let view_stack_clone = view_stack.clone();
+        let window_clone = window.clone();
         apply_button.connect_clicked(move |button| {
             let Some(system) = state.system.borrow().clone() else {
                 return;
@@ -449,6 +487,11 @@ fn build_ui(app: &adw::Application) {
                 return;
             }
             button.set_sensitive(false);
+            analyze_button_clone.set_sensitive(false);
+            view_stack_clone.set_sensitive(false);
+            let wait_cursor = gtk::gdk::Cursor::from_name("wait", None);
+            window_clone.set_cursor(wait_cursor.as_ref());
+ 
             progress.pulse();
             progress.set_text(Some("Waiting for authorization"));
             append_log(&log_view, &log_scroller, "Requesting PolicyKit authorization...");
