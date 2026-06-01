@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.2.0
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,9 @@ cargo test --workspace --offline
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.2.1-1
+- Implement collapsible resizable log panel with Show/Hide toggle button, auto-collapse on success, and auto-expand on start/error
+
 * Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.2.0-1
 - Implement resizable Paned logs partition, horizontal demarcation line, full-UI sensitivity locking, and busy mouse cursor indicator
 

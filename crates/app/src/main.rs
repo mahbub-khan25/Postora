@@ -131,6 +131,7 @@ fn build_ui(app: &adw::Application) {
     log_panel.set_margin_start(18);
     log_panel.set_margin_end(18);
     log_panel.set_margin_bottom(12);
+    log_panel.set_visible(false);
 
     let separator = gtk::Separator::new(Orientation::Horizontal);
     separator.set_margin_bottom(6);
@@ -207,7 +208,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.2.0")
+                .version("0.2.1")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
@@ -218,14 +219,71 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
+    let paned = gtk::Paned::new(Orientation::Vertical);
+    paned.set_vexpand(true);
+    paned.set_start_child(Some(&view_stack));
+    paned.set_resize_start_child(true);
+    paned.set_shrink_start_child(false);
+    paned.set_end_child(Some(&log_panel));
+    paned.set_resize_end_child(true);
+    paned.set_shrink_end_child(true);
+    paned.set_position(1000);
+
+    let toggle_logs_btn = gtk::Button::with_label("Show Logs");
+    {
+        let log_panel = log_panel.clone();
+        let paned = paned.clone();
+        let toggle_logs_btn = toggle_logs_btn.clone();
+        toggle_logs_btn.connect_clicked(move |btn| {
+            if log_panel.is_visible() {
+                log_panel.set_visible(false);
+                btn.set_label("Show Logs");
+            } else {
+                log_panel.set_visible(true);
+                paned.set_position(440);
+                btn.set_label("Hide Logs");
+            }
+        });
+    }
+
+    {
+        let log_panel = log_panel.clone();
+        let toggle_logs_btn = toggle_logs_btn.clone();
+        paned.connect_position_notify(move |p| {
+            let pos = p.position();
+            if pos >= 540 {
+                if log_panel.is_visible() {
+                    log_panel.set_visible(false);
+                    toggle_logs_btn.set_label("Show Logs");
+                }
+            } else {
+                if !log_panel.is_visible() {
+                    log_panel.set_visible(true);
+                    toggle_logs_btn.set_label("Hide Logs");
+                }
+            }
+        });
+    }
+
     let analyze_button = gtk::Button::with_label("Analyze System");
     let apply_button = gtk::Button::with_label("Apply Selected Changes");
     apply_button.set_sensitive(false);
 
     let button_box = gtk::Box::new(Orientation::Horizontal, 8);
-    button_box.set_halign(Align::End);
-    button_box.append(&analyze_button);
-    button_box.append(&apply_button);
+    button_box.set_hexpand(true);
+
+    let left_box = gtk::Box::new(Orientation::Horizontal, 8);
+    left_box.set_halign(Align::Start);
+    left_box.append(&toggle_logs_btn);
+
+    let right_box = gtk::Box::new(Orientation::Horizontal, 8);
+    right_box.set_halign(Align::End);
+    right_box.set_hexpand(true);
+    right_box.append(&analyze_button);
+    right_box.append(&apply_button);
+
+    button_box.append(&left_box);
+    button_box.append(&right_box);
 
     let footer = gtk::Box::new(Orientation::Vertical, 8);
     footer.set_margin_top(10);
@@ -234,16 +292,6 @@ fn build_ui(app: &adw::Application) {
     footer.set_margin_end(18);
     footer.append(&progress);
     footer.append(&button_box);
-
-    let paned = gtk::Paned::new(Orientation::Vertical);
-    paned.set_vexpand(true);
-    paned.set_start_child(Some(&view_stack));
-    paned.set_resize_start_child(true);
-    paned.set_shrink_start_child(false);
-    paned.set_end_child(Some(&log_panel));
-    paned.set_resize_end_child(true);
-    paned.set_shrink_end_child(false);
-    paned.set_position(440);
 
     let root = gtk::Box::new(Orientation::Vertical, 0);
     root.append(&paned);
@@ -273,10 +321,15 @@ fn build_ui(app: &adw::Application) {
         let window_clone = window.clone();
         let view_stack_clone = view_stack.clone();
         let analyze_button_clone = analyze_button.clone();
+        let log_panel_clone = log_panel.clone();
+        let paned_clone = paned.clone();
+        let toggle_logs_btn_clone = toggle_logs_btn.clone();
         glib::timeout_add_local(Duration::from_millis(100), move || {
             for message in receiver.try_iter() {
                 match message {
                     WorkerMessage::Analyzed(Ok((system, plan))) => {
+                        log_panel_clone.set_visible(false);
+                        toggle_logs_btn_clone.set_label("Show Logs");
                         *state.system.borrow_mut() = Some(system.clone());
                         *state.plan.borrow_mut() = Some(plan.clone());
                         state.selected.borrow_mut().clear();
@@ -327,6 +380,9 @@ fn build_ui(app: &adw::Application) {
                         append_log(&log_view, &log_scroller, "Analysis complete.");
                     }
                     WorkerMessage::Analyzed(Err(error)) => {
+                        log_panel_clone.set_visible(true);
+                        paned_clone.set_position(440);
+                        toggle_logs_btn_clone.set_label("Hide Logs");
                         for widget in rendered_action_rows.borrow_mut().drain(..) {
                             match widget.category {
                                 ActionCategory::FedoraSetup => action_group.remove(&widget.row),
@@ -359,6 +415,8 @@ fn build_ui(app: &adw::Application) {
                         append_log(&log_view, &log_scroller, &line);
                     }
                     WorkerMessage::ApplyFinished { result: Ok(has_updates), is_update, applied_actions } => {
+                        log_panel_clone.set_visible(false);
+                        toggle_logs_btn_clone.set_label("Show Logs");
                         let selected_actions = state.selected.borrow().clone();
                         state.selected.borrow_mut().clear();
                         state.completed.borrow_mut().extend(selected_actions);
@@ -398,6 +456,9 @@ fn build_ui(app: &adw::Application) {
                         spawn_analysis(analysis_sender.clone());
                     }
                     WorkerMessage::ApplyFinished { result: Err(error), .. } => {
+                        log_panel_clone.set_visible(true);
+                        paned_clone.set_position(440);
+                        toggle_logs_btn_clone.set_label("Hide Logs");
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Apply failed"));
                         apply_button.set_sensitive(true);
@@ -420,7 +481,13 @@ fn build_ui(app: &adw::Application) {
         let apply_button_clone = apply_button.clone();
         let view_stack_clone = view_stack.clone();
         let window_clone = window.clone();
+        let log_panel_clone = log_panel.clone();
+        let paned_clone = paned.clone();
+        let toggle_logs_btn_clone = toggle_logs_btn.clone();
         analyze_button.connect_clicked(move |btn| {
+            log_panel_clone.set_visible(true);
+            paned_clone.set_position(440);
+            toggle_logs_btn_clone.set_label("Hide Logs");
             btn.set_sensitive(false);
             apply_button_clone.set_sensitive(false);
             view_stack_clone.set_sensitive(false);
@@ -474,7 +541,13 @@ fn build_ui(app: &adw::Application) {
         let analyze_button_clone = analyze_button.clone();
         let view_stack_clone = view_stack.clone();
         let window_clone = window.clone();
+        let log_panel_clone = log_panel.clone();
+        let paned_clone = paned.clone();
+        let toggle_logs_btn_clone = toggle_logs_btn.clone();
         apply_button.connect_clicked(move |button| {
+            log_panel_clone.set_visible(true);
+            paned_clone.set_position(440);
+            toggle_logs_btn_clone.set_label("Hide Logs");
             let Some(system) = state.system.borrow().clone() else {
                 return;
             };
