@@ -582,6 +582,7 @@ dependencies = [
  "libadwaita",
  "postora-planner",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
