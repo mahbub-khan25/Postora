@@ -33,6 +33,7 @@ fn dnf_update_is_inserted_after_repos() {
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
         target_home: Some("/home/testuser".into()),
+        run_update: false,
     };
     let commands = commands_for_request(&request, &info).unwrap();
     let rendered = commands
@@ -63,6 +64,7 @@ fn command_planner_snapshots_for_fedora_40_to_44() {
             detected_gpu_vendors: info.gpu_vendors.clone(),
             target_user: Some("testuser".into()),
             target_home: Some("/home/testuser".into()),
+            run_update: false,
         };
         let commands = commands_for_request(&request, &info).unwrap();
         let rendered = commands
@@ -87,6 +89,7 @@ fn unavailable_gpu_action_is_rejected() {
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
         target_home: Some("/home/testuser".into()),
+        run_update: false,
     };
     assert!(matches!(
         commands_for_request(&request, &info),
@@ -105,9 +108,28 @@ fn helper_planning_refuses_non_fedora_systems() {
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
         target_home: Some("/home/testuser".into()),
+        run_update: false,
     };
     assert!(matches!(
         commands_for_request(&request, &info),
         Err(PlannerError::NonFedora)
     ));
+}
+
+#[test]
+fn system_update_planned_correctly() {
+    let info = base_info(42);
+    let request = ApplyRequest {
+        plan_id: Uuid::new_v4(),
+        selected_actions: BTreeSet::new(),
+        detected_fedora_version: 0,
+        detected_gpu_vendors: BTreeSet::new(),
+        target_user: Some("testuser".into()),
+        target_home: Some("/home/testuser".into()),
+        run_update: true,
+    };
+    let commands = commands_for_request(&request, &info).unwrap();
+    assert_eq!(commands.len(), 1);
+    assert_eq!(commands[0].0, ActionId::SystemUpdate);
+    assert_eq!(commands[0].1.display(), "dnf upgrade -y --refresh");
 }

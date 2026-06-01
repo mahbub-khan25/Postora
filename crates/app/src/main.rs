@@ -306,9 +306,36 @@ fn build_ui(app: &adw::Application) {
         let log_scroller = log_scroller.clone();
         analyze_button.connect_clicked(move |_| {
             progress.pulse();
-            progress.set_text(Some("Analyzing"));
-            append_log(&log_view, &log_scroller, "Analyzing system...");
-            spawn_analysis(sender.clone());
+            progress.set_text(Some("Waiting for authorization"));
+            append_log(&log_view, &log_scroller, "Starting system update before analysis...");
+            append_log(&log_view, &log_scroller, "Requesting PolicyKit authorization...");
+            let sender = sender.clone();
+            std::thread::spawn(move || {
+                let request = ApplyRequest {
+                    plan_id: uuid::Uuid::new_v4(),
+                    selected_actions: BTreeSet::new(),
+                    detected_fedora_version: 0,
+                    detected_gpu_vendors: BTreeSet::new(),
+                    target_user: std::env::var("USER").ok(),
+                    target_home: std::env::var("HOME").ok(),
+                    run_update: true,
+                };
+                let result = run_helper(request, sender.clone());
+                match result {
+                    Ok(()) => {
+                        let _ = sender.send(WorkerMessage::ApplyFinished(Ok(())));
+                    }
+                    Err(error) => {
+                        let _ = sender.send(WorkerMessage::HelperLine(format!("System update failed or skipped: {error}")));
+                        let _ = sender.send(WorkerMessage::HelperLine("Proceeding with system analysis...".into()));
+                        let system = detect_system();
+                        let plan_result = build_plan(&system)
+                            .map(|plan| (system, plan))
+                            .map_err(|error| error.to_string());
+                        let _ = sender.send(WorkerMessage::Analyzed(plan_result));
+                    }
+                }
+            });
         });
     }
 
@@ -343,6 +370,7 @@ fn build_ui(app: &adw::Application) {
                     detected_gpu_vendors: system.gpu_vendors,
                     target_user: std::env::var("USER").ok(),
                     target_home: std::env::var("HOME").ok(),
+                    run_update: false,
                 };
                 let result = run_helper(request, sender.clone());
                 let _ = sender.send(WorkerMessage::ApplyFinished(result));

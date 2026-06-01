@@ -112,6 +112,7 @@ impl GpuVendor {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ActionId {
+    SystemUpdate,
     RpmFusionFree,
     RpmFusionNonfree,
     CiscoOpenh264Repo,
@@ -196,6 +197,8 @@ pub struct ApplyRequest {
     pub detected_gpu_vendors: BTreeSet<GpuVendor>,
     pub target_user: Option<String>,
     pub target_home: Option<String>,
+    #[serde(default)]
+    pub run_update: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -897,11 +900,17 @@ pub fn commands_for_request(
     info: &SystemInfo,
 ) -> Result<Vec<(ActionId, CommandSpec)>, PlannerError> {
     let version = info.validate_supported()?;
-    if request.detected_fedora_version != version {
+    if !request.run_update && request.detected_fedora_version != version {
         return Err(PlannerError::UnsupportedFedora(request.detected_fedora_version));
     }
     let available: HashSet<ActionId> = build_plan(info)?.actions.into_iter().map(|a| a.id).collect();
     let mut out = Vec::new();
+    if request.run_update {
+        out.push((
+            ActionId::SystemUpdate,
+            CommandSpec::new("dnf", ["upgrade", "-y", "--refresh"]),
+        ));
+    }
     let mut repo_configured = false;
     for action in &request.selected_actions {
         if !available.contains(action) {
