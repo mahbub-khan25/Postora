@@ -267,14 +267,16 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         already_complete: packages_installed(info, &["gstreamer1-plugin-openh264", "mozilla-openh264"]),
         warning: None,
     });
+    let multimedia_complete = info.installed_packages.contains("ffmpeg")
+        && info.installed_packages.contains("gstreamer1-plugins-ugly");
     actions.push(Action {
         id: ActionId::MultimediaCodecs,
         category: ActionCategory::FedoraSetup,
         title: "Multimedia codecs".into(),
         description: "Install RPM Fusion multimedia packages and replace ffmpeg-free when needed.".into(),
         recommended: true,
-        selected_by_default: !info.installed_packages.contains("ffmpeg"),
-        already_complete: info.installed_packages.contains("ffmpeg"),
+        selected_by_default: !multimedia_complete,
+        already_complete: multimedia_complete,
         warning: None,
     });
 
@@ -638,23 +640,24 @@ pub fn commands_for_action(
                 ["install", "-y", "gstreamer1-plugin-openh264", "mozilla-openh264"],
             ));
         }
-        ActionId::MultimediaCodecs if !info.installed_packages.contains("ffmpeg") => {
-            if info.installed_packages.contains("ffmpeg-free") {
-                commands.push(CommandSpec::new(
-                    "dnf",
-                    ["swap", "-y", "ffmpeg-free", "ffmpeg", "--allowerasing"],
-                ));
-            } else {
-                commands.push(CommandSpec::new("dnf", ["install", "-y", "ffmpeg", "--allowerasing"]));
+        ActionId::MultimediaCodecs => {
+            if !info.installed_packages.contains("ffmpeg") {
+                if info.installed_packages.contains("ffmpeg-free") {
+                    commands.push(CommandSpec::new(
+                        "dnf",
+                        ["swap", "-y", "ffmpeg-free", "ffmpeg", "--allowerasing"],
+                    ));
+                } else {
+                    commands.push(CommandSpec::new("dnf", ["install", "-y", "ffmpeg", "--allowerasing"]));
+                }
             }
             commands.push(CommandSpec::new(
                 "dnf",
                 [
-                    "group",
-                    "upgrade",
+                    "update",
                     "-y",
-                    "multimedia",
-                    "--setop=install_weak_deps=False",
+                    "@multimedia",
+                    "--setopt=install_weak_deps=False",
                     "--exclude=PackageKit-gstreamer-plugin",
                 ],
             ));

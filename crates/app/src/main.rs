@@ -208,7 +208,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.2.1")
+                .version("0.0.2")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")

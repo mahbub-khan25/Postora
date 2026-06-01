@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.2.1
+Version:        0.0.2
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -29,7 +29,7 @@ are performed by a small helper through PolicyKit.
 %autosetup
 
 %build
-cargo build --release --offline
+cargo build --release
 
 %install
 install -Dm0755 target/release/postora %{buildroot}%{_bindir}/postora
@@ -43,7 +43,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/io.github.mahbub_khan
 appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %check
-cargo test --workspace --offline
+cargo test --workspace
 
 %files
 %license LICENSE
@@ -56,6 +56,11 @@ cargo test --workspace --offline
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.0.2-1
+- Correct DNF group upgrade command syntax (--setopt instead of --setop typo)
+- Update multimedia codecs completeness checks to require both ffmpeg and gstreamer1-plugins-ugly
+- Refactor planner to allow retrying of failed group upgrades
+
 * Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.2.1-1
 - Implement collapsible resizable log panel with Show/Hide toggle button, auto-collapse on success, and auto-expand on start/error
 
