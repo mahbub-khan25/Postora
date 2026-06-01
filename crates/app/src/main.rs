@@ -34,7 +34,11 @@ struct ActionWidgets {
 enum WorkerMessage {
     Analyzed(Result<(SystemInfo, Plan), String>),
     HelperLine(String),
-    ApplyFinished(Result<(), String>),
+    ApplyFinished {
+        result: Result<bool, String>,
+        is_update: bool,
+        applied_actions: BTreeSet<ActionId>,
+    },
 }
 
 fn main() -> glib::ExitCode {
@@ -125,7 +129,7 @@ fn build_ui(app: &adw::Application) {
         .build();
     let log_expander = gtk::Expander::builder()
         .label("Logs")
-        .expanded(true)
+        .expanded(false)
         .child(&log_scroller)
         .build();
 
@@ -191,7 +195,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.1.8")
+                .version("0.1.9")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
@@ -251,6 +255,7 @@ fn build_ui(app: &adw::Application) {
         let log_scroller = log_scroller.clone();
         let rendered_action_rows = rendered_action_rows.clone();
         let window_clone = window.clone();
+        let log_expander_clone = log_expander.clone();
         glib::timeout_add_local(Duration::from_millis(100), move || {
             for message in receiver.try_iter() {
                 match message {
@@ -326,11 +331,12 @@ fn build_ui(app: &adw::Application) {
                         append_log(&log_view, &log_scroller, &format!("Analysis failed: {error}"));
                     }
                     WorkerMessage::HelperLine(line) => {
+                        log_expander_clone.set_expanded(true);
                         progress.pulse();
                         progress.set_text(Some("Applying changes"));
                         append_log(&log_view, &log_scroller, &line);
                     }
-                    WorkerMessage::ApplyFinished(Ok(())) => {
+                    WorkerMessage::ApplyFinished { result: Ok(has_updates), is_update, applied_actions } => {
                         let selected_actions = state.selected.borrow().clone();
                         state.selected.borrow_mut().clear();
                         state.completed.borrow_mut().extend(selected_actions);
@@ -343,22 +349,32 @@ fn build_ui(app: &adw::Application) {
                         status_row.set_title("Refreshing status");
                         status_row.set_subtitle("Re-analyzing system state after apply.");
                         append_log(&log_view, &log_scroller, "Apply finished. Refreshing status...");
-                        
-                        let dialog = adw::MessageDialog::builder()
-                            .transient_for(&window_clone)
-                            .heading("Restart or Log Out Recommended")
-                            .body("A system update or repository configuration change has been successfully applied. Please restart or log out to ensure all changes take effect properly before performing further operations.")
-                            .build();
-                        dialog.add_response("ok", "OK");
-                        dialog.set_default_response(Some("ok"));
-                        dialog.connect_response(None, move |d, _| {
-                            d.close();
-                        });
-                        dialog.present();
+                        log_expander_clone.set_expanded(true);
+
+                        let needs_restart = (is_update && has_updates)
+                            || applied_actions.contains(&ActionId::NvidiaDriver)
+                            || applied_actions.contains(&ActionId::AmdAcceleration)
+                            || applied_actions.contains(&ActionId::IntelAcceleration)
+                            || applied_actions.contains(&ActionId::ZshDefault);
+
+                        if needs_restart {
+                            let dialog = adw::MessageDialog::builder()
+                                .transient_for(&window_clone)
+                                .heading("Restart or Log Out Recommended")
+                                .body("A system update, driver installation, or default shell change has been successfully applied. Please restart or log out to ensure all changes take effect properly before performing further operations.")
+                                .build();
+                            dialog.add_response("ok", "OK");
+                            dialog.set_default_response(Some("ok"));
+                            dialog.connect_response(None, move |d, _| {
+                                d.close();
+                            });
+                            dialog.present();
+                        }
 
                         spawn_analysis(analysis_sender.clone());
                     }
-                    WorkerMessage::ApplyFinished(Err(error)) => {
+                    WorkerMessage::ApplyFinished { result: Err(error), .. } => {
+                        log_expander_clone.set_expanded(true);
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Apply failed"));
                         apply_button.set_sensitive(true);
@@ -393,8 +409,12 @@ fn build_ui(app: &adw::Application) {
                 };
                 let result = run_helper(request, sender.clone());
                 match result {
-                    Ok(()) => {
-                        let _ = sender.send(WorkerMessage::ApplyFinished(Ok(())));
+                    Ok(has_updates) => {
+                        let _ = sender.send(WorkerMessage::ApplyFinished {
+                            result: Ok(has_updates),
+                            is_update: true,
+                            applied_actions: BTreeSet::new(),
+                        });
                     }
                     Err(error) => {
                         let _ = sender.send(WorkerMessage::HelperLine(format!("System update failed or skipped: {error}")));
@@ -436,7 +456,7 @@ fn build_ui(app: &adw::Application) {
             std::thread::spawn(move || {
                 let request = ApplyRequest {
                     plan_id: plan.plan_id,
-                    selected_actions,
+                    selected_actions: selected_actions.clone(),
                     detected_fedora_version: plan.fedora_version,
                     detected_gpu_vendors: system.gpu_vendors,
                     target_user: std::env::var("USER").ok(),
@@ -444,7 +464,11 @@ fn build_ui(app: &adw::Application) {
                     run_update: false,
                 };
                 let result = run_helper(request, sender.clone());
-                let _ = sender.send(WorkerMessage::ApplyFinished(result));
+                let _ = sender.send(WorkerMessage::ApplyFinished {
+                    result,
+                    is_update: false,
+                    applied_actions: selected_actions,
+                });
             });
         });
     }
@@ -585,7 +609,7 @@ fn spawn_analysis(sender: mpsc::Sender<WorkerMessage>) {
     });
 }
 
-fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Result<(), String> {
+fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Result<bool, String> {
     let helper = std::env::var("POSTORA_HELPER").unwrap_or_else(|_| HELPER_PATH.into());
     let mut child = Command::new("pkexec")
         .arg(helper)
@@ -609,8 +633,13 @@ fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Res
         .take()
         .ok_or_else(|| "failed to read helper stdout".to_string())?;
     let reader = BufReader::new(stdout);
+    let mut has_updates = false;
     for line in reader.lines() {
         let line = line.map_err(|error| format!("failed to read helper output: {error}"))?;
+        let lower = line.to_ascii_lowercase();
+        if lower.contains("upgrading") || lower.contains("installing") || lower.contains("upgraded:") || lower.contains("installed:") {
+            has_updates = true;
+        }
         let _ = sender.send(WorkerMessage::HelperLine(line));
     }
 
@@ -618,7 +647,7 @@ fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Res
         .wait_with_output()
         .map_err(|error| format!("failed to wait for helper: {error}"))?;
     if output.status.success() {
-        Ok(())
+        Ok(has_updates)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("helper exited with {}; {}", output.status, stderr.trim()))
