@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.1.5
+Version:        0.1.8
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,9 @@ cargo test --workspace --offline
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.1.8-1
+- Fix Starship command syntax error and add restart/logout prompt
+
 * Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.5-1
 - Ensure Flathub remote is always enabled and not left disabled
 
