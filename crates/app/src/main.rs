@@ -129,27 +129,78 @@ fn build_ui(app: &adw::Application) {
         .child(&log_scroller)
         .build();
 
-    let page = gtk::Box::new(Orientation::Vertical, 12);
-    page.set_margin_top(18);
-    page.set_margin_bottom(18);
-    page.set_margin_start(18);
-    page.set_margin_end(18);
-    page.append(&status_group);
-    page.append(&action_group);
-    page.append(&browsers_group);
-    page.append(&dev_group);
-    page.append(&office_group);
-    page.append(&creative_group);
-    page.append(&utilities_group);
-    page.append(&extra_group);
-    page.append(&fonts_group);
-    page.append(&log_expander);
+    let setup_page = gtk::Box::new(Orientation::Vertical, 12);
+    setup_page.set_margin_top(18);
+    setup_page.set_margin_bottom(18);
+    setup_page.set_margin_start(18);
+    setup_page.set_margin_end(18);
+    setup_page.append(&status_group);
+    setup_page.append(&action_group);
+    setup_page.append(&extra_group);
 
-    let content_scroller = gtk::ScrolledWindow::builder()
+    let setup_scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never)
-        .vexpand(true)
-        .child(&page)
+        .child(&setup_page)
         .build();
+
+    let apps_page = gtk::Box::new(Orientation::Vertical, 12);
+    apps_page.set_margin_top(18);
+    apps_page.set_margin_bottom(18);
+    apps_page.set_margin_start(18);
+    apps_page.set_margin_end(18);
+    apps_page.append(&browsers_group);
+    apps_page.append(&dev_group);
+    apps_page.append(&office_group);
+    apps_page.append(&creative_group);
+    apps_page.append(&utilities_group);
+    apps_page.append(&fonts_group);
+
+    let apps_scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never)
+        .child(&apps_page)
+        .build();
+
+    let view_stack = adw::ViewStack::builder()
+        .vexpand(true)
+        .hexpand(true)
+        .build();
+
+    let stack_page_setup = view_stack.add_titled(&setup_scroller, Some("setup"), "System Setup");
+    stack_page_setup.set_icon_name(Some("preferences-system-symbolic"));
+
+    let stack_page_apps = view_stack.add_titled(&apps_scroller, Some("apps"), "Applications");
+    stack_page_apps.set_icon_name(Some("application-x-executable-symbolic"));
+
+    let switcher = adw::ViewSwitcher::builder()
+        .stack(&view_stack)
+        .halign(Align::Center)
+        .build();
+
+    header.set_title_widget(Some(&switcher));
+
+    let about_button = gtk::Button::builder()
+        .icon_name("help-about-symbolic")
+        .tooltip_text("About Postora")
+        .build();
+    header.pack_end(&about_button);
+
+    {
+        let window_clone = window.clone();
+        about_button.connect_clicked(move |_| {
+            let about = adw::AboutWindow::builder()
+                .transient_for(&window_clone)
+                .application_name("Postora")
+                .application_icon("io.github.mahbub_khan25.Postora")
+                .version("0.1.8")
+                .developer_name("Mahbub Afzal Khan")
+                .support_url("mailto:mahbub.aumi@gmail.com")
+                .website("https://github.com/mahbub-khan25/Postora")
+                .issue_url("https://github.com/mahbub-khan25/Postora/issues")
+                .license_type(gtk::License::MitX11)
+                .build();
+            about.present();
+        });
+    }
 
     let analyze_button = gtk::Button::with_label("Analyze System");
     let apply_button = gtk::Button::with_label("Apply Selected Changes");
@@ -169,7 +220,13 @@ fn build_ui(app: &adw::Application) {
     footer.append(&button_box);
 
     let root = gtk::Box::new(Orientation::Vertical, 0);
-    root.append(&content_scroller);
+    
+    log_expander.set_margin_start(18);
+    log_expander.set_margin_end(18);
+    log_expander.set_margin_bottom(12);
+
+    root.append(&view_stack);
+    root.append(&log_expander);
     root.append(&footer);
 
     let toolbar_view = adw::ToolbarView::new();
