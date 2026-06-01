@@ -688,7 +688,7 @@ pub fn commands_for_action(
                 ["install", "-y", "intel-media-driver", "libva-intel-driver"],
             ));
         }
-        ActionId::Flathub if !info.flatpak_remotes.contains("flathub") => {
+        ActionId::Flathub => {
             if !info.installed_packages.contains("flatpak") {
                 commands.push(CommandSpec::new("dnf", ["install", "-y", "flatpak"]));
             }
@@ -700,6 +700,10 @@ pub fn commands_for_action(
                     "flathub",
                     "https://dl.flathub.org/repo/flathub.flatpakrepo",
                 ],
+            ));
+            commands.push(CommandSpec::new(
+                "flatpak",
+                ["remote-modify", "--enable", "flathub"],
             ));
         }
         ActionId::Ghostty if !info.installed_packages.contains("ghostty") => {
@@ -1098,6 +1102,10 @@ fn flatpak_install_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec>
             ],
         ));
     }
+    commands.push(CommandSpec::new(
+        "flatpak",
+        ["remote-modify", "--enable", "flathub"],
+    ));
     commands.push(CommandSpec::new("flatpak", ["install", "-y", "flathub", app_id]));
     commands
 }

@@ -40,11 +40,12 @@ fn dnf_update_is_inserted_after_repos() {
         .map(|(_, command)| command.display())
         .collect::<Vec<_>>();
     
-    assert_eq!(rendered.len(), 4);
+    assert_eq!(rendered.len(), 5);
     assert!(rendered[0].contains("mirrors.rpmfusion.org"));
     assert_eq!(rendered[1], "dnf update -y --refresh");
     assert!(rendered[2].contains("dnf install -y flatpak"));
     assert!(rendered[3].contains("flatpak remote-add"));
+    assert_eq!(rendered[4], "flatpak remote-modify --enable flathub");
 }
 
 #[test]
