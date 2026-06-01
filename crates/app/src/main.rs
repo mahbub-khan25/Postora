@@ -193,6 +193,7 @@ fn build_ui(app: &adw::Application) {
         let log_view = log_view.clone();
         let log_scroller = log_scroller.clone();
         let rendered_action_rows = rendered_action_rows.clone();
+        let window_clone = window.clone();
         glib::timeout_add_local(Duration::from_millis(100), move || {
             for message in receiver.try_iter() {
                 match message {
@@ -285,6 +286,19 @@ fn build_ui(app: &adw::Application) {
                         status_row.set_title("Refreshing status");
                         status_row.set_subtitle("Re-analyzing system state after apply.");
                         append_log(&log_view, &log_scroller, "Apply finished. Refreshing status...");
+                        
+                        let dialog = adw::MessageDialog::builder()
+                            .transient_for(&window_clone)
+                            .heading("Restart or Log Out Recommended")
+                            .body("A system update or repository configuration change has been successfully applied. Please restart or log out to ensure all changes take effect properly before performing further operations.")
+                            .build();
+                        dialog.add_response("ok", "OK");
+                        dialog.set_default_response(Some("ok"));
+                        dialog.connect_response(None, move |d, _| {
+                            d.close();
+                        });
+                        dialog.present();
+
                         spawn_analysis(analysis_sender.clone());
                     }
                     WorkerMessage::ApplyFinished(Err(error)) => {
