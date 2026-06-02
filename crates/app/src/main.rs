@@ -349,6 +349,7 @@ fn build_ui(app: &adw::Application) {
                         state.selected.borrow_mut().clear();
                         {
                             let mut completed = state.completed.borrow_mut();
+                            completed.clear();
                             for action in &plan.actions {
                                 if action.already_complete {
                                     completed.insert(action.id);
