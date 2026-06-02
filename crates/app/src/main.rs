@@ -170,11 +170,22 @@ fn build_ui(app: &adw::Application) {
     apps_page.append(&office_group);
     apps_page.append(&creative_group);
     apps_page.append(&utilities_group);
-    apps_page.append(&fonts_group);
 
     let apps_scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never)
         .child(&apps_page)
+        .build();
+
+    let fonts_page = gtk::Box::new(Orientation::Vertical, 12);
+    fonts_page.set_margin_top(18);
+    fonts_page.set_margin_bottom(18);
+    fonts_page.set_margin_start(18);
+    fonts_page.set_margin_end(18);
+    fonts_page.append(&fonts_group);
+
+    let fonts_scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never)
+        .child(&fonts_page)
         .build();
 
     let view_stack = adw::ViewStack::builder()
@@ -187,6 +198,9 @@ fn build_ui(app: &adw::Application) {
 
     let stack_page_apps = view_stack.add_titled(&apps_scroller, Some("apps"), "Applications");
     stack_page_apps.set_icon_name(Some("application-x-executable-symbolic"));
+
+    let stack_page_fonts = view_stack.add_titled(&fonts_scroller, Some("fonts"), "Nerd Fonts");
+    stack_page_fonts.set_icon_name(Some("font-x-generic-symbolic"));
 
     let switcher = adw::ViewSwitcher::builder()
         .stack(&view_stack)
@@ -208,7 +222,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.0.2")
+                .version("0.0.4")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
