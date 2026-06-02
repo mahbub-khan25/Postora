@@ -137,6 +137,8 @@ pub enum ActionId {
     FontUbuntuMono,
     FontRobotoMono,
     FontIosevka,
+    Kvantum,
+    DevTools,
     FlatpakChrome,
     FlatpakFirefox,
     FlatpakBrave,
@@ -576,6 +578,32 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         warning: None,
     });
 
+    actions.push(Action {
+        id: ActionId::Kvantum,
+        category: ActionCategory::UtilitiesTools,
+        title: "Kvantum Manager".into(),
+        description: "Install Kvantum theme engine, config tool, and the Papirus icon theme.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("kvantum")
+            && info.installed_packages.contains("papirus-icon-theme"),
+        warning: None,
+    });
+
+    actions.push(Action {
+        id: ActionId::DevTools,
+        category: ActionCategory::UtilitiesTools,
+        title: "Development Tools".into(),
+        description: "Install git, gcc, g++, make, cmake, curl, wget, and unzip.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("git")
+            && info.installed_packages.contains("gcc")
+            && info.installed_packages.contains("make")
+            && info.installed_packages.contains("cmake"),
+        warning: None,
+    });
+
     for font in nerd_fonts() {
         actions.push(Action {
             id: font.id,
@@ -726,6 +754,35 @@ pub fn commands_for_action(
         }
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
             commands.push(CommandSpec::new("dnf", ["install", "-y", "vlc"]));
+        }
+        ActionId::Kvantum => {
+            let mut args = vec!["install".to_string(), "-y".to_string()];
+            let mut needed = false;
+            if !info.installed_packages.contains("kvantum") {
+                args.push("kvantum".to_string());
+                args.push("kvantum-qt5".to_string());
+                needed = true;
+            }
+            if !info.installed_packages.contains("papirus-icon-theme") {
+                args.push("papirus-icon-theme".to_string());
+                needed = true;
+            }
+            if needed {
+                commands.push(CommandSpec::new("dnf", args));
+            }
+        }
+        ActionId::DevTools => {
+            let mut args = vec!["install".to_string(), "-y".to_string()];
+            let mut needed = false;
+            for pkg in &["git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip"] {
+                if !info.installed_packages.contains(*pkg) {
+                    args.push(pkg.to_string());
+                    needed = true;
+                }
+            }
+            if needed {
+                commands.push(CommandSpec::new("dnf", args));
+            }
         }
         ActionId::ZshDefault if !default_shell_is_zsh() => {
             if !info.installed_packages.contains("zsh") {

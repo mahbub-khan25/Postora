@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.0.2
+Version:        0.0.3
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,7 +56,10 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
-* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.0.2-1
+* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.3-1
+- Add Kvantum Manager and Development Tools installation actions to the GUI
+- Integrate automatic shell path configuration and sourcing into Zed action
+
 - Correct DNF group upgrade command syntax (--setopt instead of --setop typo)
 - Update multimedia codecs completeness checks to require both ffmpeg and gstreamer1-plugins-ugly
 - Refactor planner to allow retrying of failed group upgrades
