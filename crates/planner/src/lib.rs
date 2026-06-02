@@ -195,6 +195,8 @@ pub struct Plan {
 pub struct ApplyRequest {
     pub plan_id: Uuid,
     pub selected_actions: BTreeSet<ActionId>,
+    #[serde(default)]
+    pub uninstall_actions: BTreeSet<ActionId>,
     pub detected_fedora_version: u16,
     pub detected_gpu_vendors: BTreeSet<GpuVendor>,
     pub target_user: Option<String>,
@@ -749,7 +751,7 @@ pub fn commands_for_action(
             commands.extend(user_shell_commands(
                 info,
                 "Install Zed",
-                r#"curl -f https://zed.dev/install.sh | sh; touch "$HOME/.bashrc"; if ! grep -q "local/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if [ -f "$HOME/.zshrc" ] && ! grep -q "bashrc" "$HOME/.zshrc" 2>/dev/null; then printf '\n# Source user .bashrc if it exists for shared environment variables/aliases\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$HOME/.zshrc"; fi"#,
+                r#"curl -f https://zed.dev/install.sh | sh; touch "$HOME/.bashrc"; if ! grep -q "local/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if [ -f "$HOME/.zshrc" ]; then if ! grep -q "local/bin" "$HOME/.zshrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.zshrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.zshrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.zshrc"; fi; fi"#,
             ));
         }
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
@@ -804,7 +806,7 @@ pub fn commands_for_action(
             commands.extend(user_shell_commands(
                 info,
                 "Configure Starship",
-                r##"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || echo 'eval "$(starship init bash)"' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc""##,
+                r##"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || printf '\n# Starship shell prompt (only if in bash)\nif [ -n "$BASH_VERSION" ]; then\n    eval "$(starship init bash)"\nfi\n' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc""##,
             ));
         }
         ActionId::FlatpakChrome => commands.extend(flatpak_install_commands("com.google.Chrome", info)),
@@ -837,6 +839,61 @@ pub fn commands_for_action(
             commands.push(CommandSpec::new("install", ["-d", "-m", "0755", destination.as_str()]));
             commands.push(CommandSpec::new("unzip", ["-o", archive.as_str(), "-d", destination.as_str()]));
             commands.push(CommandSpec::new("fc-cache", ["-f", destination.as_str()]));
+        }
+        _ => {}
+    }
+    Ok(commands)
+}
+
+pub fn uninstall_commands_for_action(
+    id: ActionId,
+    _version: u16,
+    info: &SystemInfo,
+) -> Result<Vec<CommandSpec>, PlannerError> {
+    let mut commands = Vec::new();
+    match id {
+        ActionId::FlatpakChrome => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.google.Chrome"])),
+        ActionId::FlatpakFirefox => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.mozilla.firefox"])),
+        ActionId::FlatpakBrave => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.brave.Browser"])),
+        ActionId::FlatpakZed => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "dev.zed.Zed"])),
+        ActionId::FlatpakPodmanDesktop => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "io.podman_desktop.PodmanDesktop"])),
+        ActionId::FlatpakDbeaver => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "io.dbeaver.DBeaverCommunity"])),
+        ActionId::FlatpakPostman => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.getpostman.Postman"])),
+        ActionId::FlatpakOnlyOffice => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.onlyoffice.desktopeditors"])),
+        ActionId::FlatpakObsidian => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "md.obsidian.Obsidian"])),
+        ActionId::FlatpakBitwarden => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.bitwarden.desktop"])),
+        ActionId::FlatpakVlc => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.videolan.VLC"])),
+        ActionId::FlatpakObsStudio => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.obsproject.Studio"])),
+        ActionId::FlatpakGimp => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.gimp.GIMP"])),
+        ActionId::FlatpakKdenlive => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.kde.kdenlive"])),
+        ActionId::FlatpakLocalSend => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.localsend.localsend_app"])),
+        ActionId::FlatpakFlameshot => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.flameshot.Flameshot"])),
+        ActionId::FlatpakFlatseal => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.github.tchx84.Flatseal"])),
+        ActionId::FlatpakBottles => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.usebottles.bottles"])),
+        ActionId::Ghostty => commands.push(CommandSpec::new("dnf", ["remove", "-y", "ghostty"])),
+        ActionId::Vlc => commands.push(CommandSpec::new("dnf", ["remove", "-y", "vlc"])),
+        ActionId::Kvantum => commands.push(CommandSpec::new("dnf", ["remove", "-y", "kvantum", "kvantum-qt5", "papirus-icon-theme"])),
+        ActionId::DevTools => commands.push(CommandSpec::new("dnf", ["remove", "-y", "git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip"])),
+        ActionId::Zed => {
+            commands.extend(user_shell_commands(
+                info,
+                "Uninstall Zed",
+                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed"; if [ -f "$HOME/.zshrc" ]; then sed -i '/local\/bin/d' "$HOME/.zshrc"; sed -i '/zed.app\/bin/d' "$HOME/.zshrc"; fi"#,
+            ));
+        }
+        ActionId::Starship => {
+            commands.push(CommandSpec::new("rm", ["-f", "/usr/local/bin/starship"]));
+            commands.extend(user_shell_commands(
+                info,
+                "Remove Starship config hooks",
+                r#"sed -i '/starship/d' "$HOME/.bashrc" "$HOME/.zshrc"; rm -f "$HOME/.config/starship.toml""#,
+            ));
+        }
+        action if nerd_font(action).is_some() => {
+            let font = nerd_font(action).expect("font action exists");
+            let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
+            commands.push(CommandSpec::new("rm", ["-rf", destination.as_str()]));
+            commands.push(CommandSpec::new("fc-cache", ["-f", "/usr/local/share/fonts/postora"]));
         }
         _ => {}
     }
@@ -987,6 +1044,16 @@ pub fn commands_for_request(
             for command in cmds {
                 out.push((*action, command));
             }
+        }
+    }
+
+    for action in &request.uninstall_actions {
+        if !available.contains(action) {
+            return Err(PlannerError::UnavailableAction(*action));
+        }
+        let cmds = uninstall_commands_for_action(*action, version, info)?;
+        for command in cmds {
+            out.push((*action, command));
         }
     }
 

@@ -368,6 +368,17 @@ fn build_ui(app: &adw::Application) {
                             &state,
                             &plan,
                             &rendered_action_rows,
+                            &window_clone,
+                            &analysis_sender,
+                            &apply_button,
+                            &analyze_button_clone,
+                            &view_stack_clone,
+                            &progress,
+                            &log_view,
+                            &log_scroller,
+                            &log_panel_clone,
+                            &paned_clone,
+                            &toggle_logs_btn_clone,
                         );
                         status_row.set_title(&format_system_title(&system));
                         status_row.set_subtitle(&format_system_subtitle(&system));
@@ -503,6 +514,7 @@ fn build_ui(app: &adw::Application) {
                 let request = ApplyRequest {
                     plan_id: uuid::Uuid::new_v4(),
                     selected_actions: BTreeSet::new(),
+                    uninstall_actions: BTreeSet::new(),
                     detected_fedora_version: 0,
                     detected_gpu_vendors: BTreeSet::new(),
                     target_user: std::env::var("USER").ok(),
@@ -573,6 +585,7 @@ fn build_ui(app: &adw::Application) {
                 let request = ApplyRequest {
                     plan_id: plan.plan_id,
                     selected_actions: selected_actions.clone(),
+                    uninstall_actions: BTreeSet::new(),
                     detected_fedora_version: plan.fedora_version,
                     detected_gpu_vendors: system.gpu_vendors,
                     target_user: std::env::var("USER").ok(),
@@ -604,6 +617,17 @@ fn render_actions(
     state: &UiState,
     plan: &Plan,
     rendered_rows: &Rc<RefCell<Vec<ActionWidgets>>>,
+    window: &adw::ApplicationWindow,
+    sender: &mpsc::Sender<WorkerMessage>,
+    apply_button: &gtk::Button,
+    analyze_button: &gtk::Button,
+    view_stack: &adw::ViewStack,
+    progress: &gtk::ProgressBar,
+    log_view: &gtk::TextView,
+    log_scroller: &gtk::ScrolledWindow,
+    log_panel: &gtk::Box,
+    paned: &gtk::Paned,
+    toggle_logs_btn: &gtk::Button,
 ) {
     let completed_actions = state.completed.borrow().clone();
     for action in &plan.actions {
@@ -620,6 +644,107 @@ fn render_actions(
             status_label.add_css_class("dim-label");
             status_label.set_halign(Align::End);
             row.add_suffix(&status_label);
+
+            let can_uninstall = action.category != ActionCategory::FedoraSetup
+                && action.id != ActionId::ZshDefault;
+            if can_uninstall {
+                let uninstall_button = gtk::Button::builder()
+                    .label("Uninstall")
+                    .valign(Align::Center)
+                    .build();
+                uninstall_button.add_css_class("destructive");
+
+                let win = window.clone();
+                let snd = sender.clone();
+                let app_btn = apply_button.clone();
+                let anz_btn = analyze_button.clone();
+                let stk = view_stack.clone();
+                let prg = progress.clone();
+                let view = log_view.clone();
+                let scroller = log_scroller.clone();
+                let panel = log_panel.clone();
+                let pnd = paned.clone();
+                let tgl_btn = toggle_logs_btn.clone();
+
+                let action_id = action.id;
+                let action_title = action.title.clone();
+                let plan_id = plan.plan_id;
+                let version = plan.fedora_version;
+                let system_info = state.system.borrow().clone();
+
+                uninstall_button.connect_clicked(move |_btn| {
+                    let confirm = adw::MessageDialog::builder()
+                        .transient_for(&win)
+                        .heading(&format!("Uninstall {}?", action_title))
+                        .body(&format!("Are you sure you want to uninstall {}? This action will execute the uninstallation plan.", action_title))
+                        .build();
+                    confirm.add_response("cancel", "Cancel");
+                    confirm.add_response("uninstall", "Uninstall");
+                    confirm.set_response_appearance("uninstall", adw::ResponseAppearance::Destructive);
+                    confirm.set_default_response(Some("cancel"));
+
+                    let win_clone = win.clone();
+                    let snd_clone = snd.clone();
+                    let app_btn_clone = app_btn.clone();
+                    let anz_btn_clone = anz_btn.clone();
+                    let stk_clone = stk.clone();
+                    let prg_clone = prg.clone();
+                    let view_clone = view.clone();
+                    let scroller_clone = scroller.clone();
+                    let panel_clone = panel.clone();
+                    let pnd_clone = pnd.clone();
+                    let tgl_clone = tgl_btn.clone();
+
+                    let system_info_clone = system_info.clone();
+                    let title_val = action_title.clone();
+
+                    confirm.connect_response(None, move |dialog, response| {
+                        dialog.close();
+                        if response == "uninstall" {
+                            panel_clone.set_visible(true);
+                            pnd_clone.set_position(440);
+                            tgl_clone.set_label("Hide Logs");
+                            app_btn_clone.set_sensitive(false);
+                            anz_btn_clone.set_sensitive(false);
+                            stk_clone.set_sensitive(false);
+                            let wait_cursor = gtk::gdk::Cursor::from_name("wait", None);
+                            win_clone.set_cursor(wait_cursor.as_ref());
+
+                            prg_clone.pulse();
+                            let text = format!("Uninstalling: {}", title_val);
+                            prg_clone.set_text(Some(&text));
+                            append_log(&view_clone, &scroller_clone, &format!("Requesting uninstallation of {}...", title_val));
+                            append_log(&view_clone, &scroller_clone, "Requesting PolicyKit authorization...");
+
+                            let snd_thread = snd_clone.clone();
+                            let system_info_val = system_info_clone.clone();
+                            std::thread::spawn(move || {
+                                let mut uninstall_set = BTreeSet::new();
+                                uninstall_set.insert(action_id);
+
+                                let request = ApplyRequest {
+                                    plan_id,
+                                    selected_actions: BTreeSet::new(),
+                                    uninstall_actions: uninstall_set,
+                                    detected_fedora_version: version,
+                                    detected_gpu_vendors: system_info_val.map(|s| s.gpu_vendors).unwrap_or_default(),
+                                    target_user: std::env::var("USER").ok(),
+                                    target_home: std::env::var("HOME").ok(),
+                                    run_update: false,
+                                };
+                                let result = run_helper(request, snd_thread.clone());
+                                let _ = snd_thread.send(WorkerMessage::ApplyFinished {
+                                    result,
+                                    is_update: false,
+                                    applied_actions: BTreeSet::new(),
+                                });
+                            });
+                        }
+                    });
+                    confirm.present();
+                });
+                row.add_suffix(&uninstall_button);
+            }
         }
         let check = gtk::CheckButton::new();
         check.set_valign(Align::Center);

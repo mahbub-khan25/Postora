@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.0.3
+Version:        0.0.4
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,11 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.4-1
+- Implement app uninstallation directly from the GUI (dnf, flatpak, zed, starship, nerd-fonts)
+- Implement BASH_VERSION shell path sync guards in .bashrc to prevent shopt errors under Zsh
+- Make .zshrc and .bashrc zed/starship configs fully independent without cross-shell sourcing
+
 * Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.3-1
 - Add Kvantum Manager and Development Tools installation actions to the GUI
 - Integrate automatic shell path configuration and sourcing into Zed action

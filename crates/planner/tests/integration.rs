@@ -29,6 +29,7 @@ fn dnf_update_is_inserted_after_repos() {
     let request = ApplyRequest {
         plan_id: Uuid::new_v4(),
         selected_actions: BTreeSet::from([ActionId::RpmFusionFree, ActionId::Flathub]),
+        uninstall_actions: BTreeSet::new(),
         detected_fedora_version: 42,
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
@@ -60,6 +61,7 @@ fn command_planner_snapshots_for_fedora_40_to_44() {
         let request = ApplyRequest {
             plan_id: plan.plan_id,
             selected_actions,
+            uninstall_actions: BTreeSet::new(),
             detected_fedora_version: version,
             detected_gpu_vendors: info.gpu_vendors.clone(),
             target_user: Some("testuser".into()),
@@ -85,6 +87,7 @@ fn unavailable_gpu_action_is_rejected() {
     let request = ApplyRequest {
         plan_id: Uuid::new_v4(),
         selected_actions: BTreeSet::from([ActionId::NvidiaDriver]),
+        uninstall_actions: BTreeSet::new(),
         detected_fedora_version: 42,
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
@@ -104,6 +107,7 @@ fn helper_planning_refuses_non_fedora_systems() {
     let request = ApplyRequest {
         plan_id: Uuid::new_v4(),
         selected_actions: BTreeSet::from([ActionId::Flathub]),
+        uninstall_actions: BTreeSet::new(),
         detected_fedora_version: 42,
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
@@ -122,6 +126,7 @@ fn system_update_planned_correctly() {
     let request = ApplyRequest {
         plan_id: Uuid::new_v4(),
         selected_actions: BTreeSet::new(),
+        uninstall_actions: BTreeSet::new(),
         detected_fedora_version: 0,
         detected_gpu_vendors: BTreeSet::new(),
         target_user: Some("testuser".into()),
