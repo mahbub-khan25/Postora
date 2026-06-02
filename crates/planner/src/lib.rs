@@ -94,12 +94,16 @@ impl GpuVendor {
 
     pub fn from_lspci_line(line: &str) -> Option<Self> {
         let lower = line.to_ascii_lowercase();
-        if !(lower.contains("vga") || lower.contains("3d controller") || lower.contains("display")) {
+        if !(lower.contains("vga") || lower.contains("3d controller") || lower.contains("display"))
+        {
             return None;
         }
         if lower.contains("nvidia") {
             Some(Self::Nvidia)
-        } else if lower.contains("amd") || lower.contains("ati") || lower.contains("advanced micro devices") {
+        } else if lower.contains("amd")
+            || lower.contains("ati")
+            || lower.contains("advanced micro devices")
+        {
             Some(Self::Amd)
         } else if lower.contains("intel") {
             Some(Self::Intel)
@@ -142,7 +146,6 @@ pub enum ActionId {
     FlatpakChrome,
     FlatpakFirefox,
     FlatpakBrave,
-    FlatpakZed,
     FlatpakPodmanDesktop,
     FlatpakDbeaver,
     FlatpakPostman,
@@ -170,6 +173,7 @@ pub enum ActionCategory {
     OfficeProductivity,
     MediaCreative,
     UtilitiesTools,
+    Kde,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -212,7 +216,10 @@ pub struct CommandSpec {
 }
 
 impl CommandSpec {
-    pub fn new(program: impl Into<String>, args: impl IntoIterator<Item = impl Into<String>>) -> Self {
+    pub fn new(
+        program: impl Into<String>,
+        args: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
         Self {
             program: program.into(),
             args: args.into_iter().map(Into::into).collect(),
@@ -227,6 +234,7 @@ impl CommandSpec {
     }
 }
 
+#[allow(clippy::vec_init_then_push)]
 pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
     let version = info.validate_supported()?;
     let mut actions = Vec::new();
@@ -245,7 +253,8 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         id: ActionId::RpmFusionNonfree,
         category: ActionCategory::FedoraSetup,
         title: "RPM Fusion Nonfree".into(),
-        description: "Enable the RPM Fusion Nonfree repository for codecs and vendor drivers.".into(),
+        description: "Enable the RPM Fusion Nonfree repository for codecs and vendor drivers."
+            .into(),
         recommended: true,
         selected_by_default: !repo_enabled(info, "rpmfusion-nonfree"),
         already_complete: repo_enabled(info, "rpmfusion-nonfree"),
@@ -267,8 +276,14 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         title: "OpenH264 packages".into(),
         description: "Install GStreamer and Firefox OpenH264 integration packages.".into(),
         recommended: true,
-        selected_by_default: !packages_installed(info, &["gstreamer1-plugin-openh264", "mozilla-openh264"]),
-        already_complete: packages_installed(info, &["gstreamer1-plugin-openh264", "mozilla-openh264"]),
+        selected_by_default: !packages_installed(
+            info,
+            &["gstreamer1-plugin-openh264", "mozilla-openh264"],
+        ),
+        already_complete: packages_installed(
+            info,
+            &["gstreamer1-plugin-openh264", "mozilla-openh264"],
+        ),
         warning: None,
     });
     let multimedia_complete = info.installed_packages.contains("ffmpeg")
@@ -277,7 +292,8 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         id: ActionId::MultimediaCodecs,
         category: ActionCategory::FedoraSetup,
         title: "Multimedia codecs".into(),
-        description: "Install RPM Fusion multimedia packages and replace ffmpeg-free when needed.".into(),
+        description: "Install RPM Fusion multimedia packages and replace ffmpeg-free when needed."
+            .into(),
         recommended: true,
         selected_by_default: !multimedia_complete,
         already_complete: multimedia_complete,
@@ -353,7 +369,8 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         id: ActionId::Zed,
         category: ActionCategory::ExtraApps,
         title: "Zed editor".into(),
-        description: "Install Zed for the current user using the official zed.dev install script.".into(),
+        description: "Install Zed for the current user using the official zed.dev install script."
+            .into(),
         recommended: false,
         selected_by_default: false,
         already_complete: zed_installed(&current_home_dir()),
@@ -377,7 +394,9 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         recommended: false,
         selected_by_default: false,
         already_complete: default_shell_is_zsh(),
-        warning: Some("You may need to log out and back in for the default shell change to apply.".into()),
+        warning: Some(
+            "You may need to log out and back in for the default shell change to apply.".into(),
+        ),
     });
     actions.push(Action {
         id: ActionId::Starship,
@@ -424,23 +443,15 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
 
     // Development & Database
     actions.push(Action {
-        id: ActionId::FlatpakZed,
-        category: ActionCategory::DevDatabase,
-        title: "Zed IDE (Flatpak)".into(),
-        description: "Install Zed developer IDE.".into(),
-        recommended: false,
-        selected_by_default: false,
-        already_complete: info.flatpak_apps.contains("dev.zed.Zed"),
-        warning: None,
-    });
-    actions.push(Action {
         id: ActionId::FlatpakPodmanDesktop,
         category: ActionCategory::DevDatabase,
         title: "Podman Desktop".into(),
         description: "Install Podman Desktop container tool.".into(),
         recommended: false,
         selected_by_default: false,
-        already_complete: info.flatpak_apps.contains("io.podman_desktop.PodmanDesktop"),
+        already_complete: info
+            .flatpak_apps
+            .contains("io.podman_desktop.PodmanDesktop"),
         warning: None,
     });
     actions.push(Action {
@@ -582,9 +593,10 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
 
     actions.push(Action {
         id: ActionId::Kvantum,
-        category: ActionCategory::UtilitiesTools,
+        category: ActionCategory::Kde,
         title: "Kvantum Manager".into(),
-        description: "Install Kvantum theme engine, config tool, and the Papirus icon theme.".into(),
+        description: "Install Kvantum theme engine, config tool, and the Papirus icon theme."
+            .into(),
         recommended: false,
         selected_by_default: false,
         already_complete: info.installed_packages.contains("kvantum")
@@ -594,7 +606,7 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
 
     actions.push(Action {
         id: ActionId::DevTools,
-        category: ActionCategory::UtilitiesTools,
+        category: ActionCategory::ExtraApps,
         title: "Development Tools".into(),
         description: "Install git, gcc, g++, make, cmake, curl, wget, and unzip.".into(),
         recommended: false,
@@ -611,10 +623,17 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
             id: font.id,
             category: ActionCategory::NerdFonts,
             title: font.title.into(),
-            description: format!("Install the {} Nerd Font from the Nerd Fonts v3.4.0 release.", font.title),
+            description: format!(
+                "Install the {} Nerd Font from the Nerd Fonts v3.4.0 release.",
+                font.title
+            ),
             recommended: false,
             selected_by_default: false,
-            already_complete: Path::new(&format!("/usr/local/share/fonts/postora/{}", font.asset_slug)).exists(),
+            already_complete: Path::new(&format!(
+                "/usr/local/share/fonts/postora/{}",
+                font.asset_slug
+            ))
+            .exists(),
             warning: None,
         });
     }
@@ -633,22 +652,26 @@ pub fn commands_for_action(
 ) -> Result<Vec<CommandSpec>, PlannerError> {
     let mut commands = Vec::new();
     match action {
-        ActionId::RpmFusionFree if !repo_enabled(info, "rpmfusion-free") => commands.push(CommandSpec::new(
-            "dnf",
-            [
-                "install".into(),
-                "-y".into(),
-                rpmfusion_release_url("free", version),
-            ],
-        )),
-        ActionId::RpmFusionNonfree if !repo_enabled(info, "rpmfusion-nonfree") => commands.push(CommandSpec::new(
-            "dnf",
-            [
-                "install".into(),
-                "-y".into(),
-                rpmfusion_release_url("nonfree", version),
-            ],
-        )),
+        ActionId::RpmFusionFree if !repo_enabled(info, "rpmfusion-free") => {
+            commands.push(CommandSpec::new(
+                "dnf",
+                [
+                    "install".into(),
+                    "-y".into(),
+                    rpmfusion_release_url("free", version),
+                ],
+            ))
+        }
+        ActionId::RpmFusionNonfree if !repo_enabled(info, "rpmfusion-nonfree") => {
+            commands.push(CommandSpec::new(
+                "dnf",
+                [
+                    "install".into(),
+                    "-y".into(),
+                    rpmfusion_release_url("nonfree", version),
+                ],
+            ))
+        }
         ActionId::CiscoOpenh264Repo if !repo_enabled(info, "fedora-cisco-openh264") => {
             if version <= 40 {
                 commands.push(CommandSpec::new(
@@ -658,7 +681,11 @@ pub fn commands_for_action(
             } else {
                 commands.push(CommandSpec::new(
                     "dnf",
-                    ["config-manager", "setopt", "fedora-cisco-openh264.enabled=1"],
+                    [
+                        "config-manager",
+                        "setopt",
+                        "fedora-cisco-openh264.enabled=1",
+                    ],
                 ));
             }
         }
@@ -667,7 +694,12 @@ pub fn commands_for_action(
         {
             commands.push(CommandSpec::new(
                 "dnf",
-                ["install", "-y", "gstreamer1-plugin-openh264", "mozilla-openh264"],
+                [
+                    "install",
+                    "-y",
+                    "gstreamer1-plugin-openh264",
+                    "mozilla-openh264",
+                ],
             ));
         }
         ActionId::MultimediaCodecs => {
@@ -678,7 +710,10 @@ pub fn commands_for_action(
                         ["swap", "-y", "ffmpeg-free", "ffmpeg", "--allowerasing"],
                     ));
                 } else {
-                    commands.push(CommandSpec::new("dnf", ["install", "-y", "ffmpeg", "--allowerasing"]));
+                    commands.push(CommandSpec::new(
+                        "dnf",
+                        ["install", "-y", "ffmpeg", "--allowerasing"],
+                    ));
                 }
             }
             commands.push(CommandSpec::new(
@@ -712,7 +747,12 @@ pub fn commands_for_action(
             }
             commands.push(CommandSpec::new(
                 "dnf",
-                ["install", "-y", "mesa-va-drivers-freeworld", "mesa-vdpau-drivers-freeworld"],
+                [
+                    "install",
+                    "-y",
+                    "mesa-va-drivers-freeworld",
+                    "mesa-vdpau-drivers-freeworld",
+                ],
             ));
         }
         ActionId::IntelAcceleration if !info.installed_packages.contains("intel-media-driver") => {
@@ -732,6 +772,7 @@ pub fn commands_for_action(
                 "flatpak",
                 [
                     "remote-add",
+                    "--system",
                     "--if-not-exists",
                     "flathub",
                     "https://dl.flathub.org/repo/flathub.flatpakrepo",
@@ -739,19 +780,35 @@ pub fn commands_for_action(
             ));
             commands.push(CommandSpec::new(
                 "flatpak",
-                ["remote-modify", "--enable", "flathub"],
+                ["remote-modify", "--system", "--enable", "flathub"],
             ));
         }
         ActionId::Ghostty if !info.installed_packages.contains("ghostty") => {
-            commands.push(CommandSpec::new("dnf", ["install", "-y", "dnf-plugins-core"]));
-            commands.push(CommandSpec::new("dnf", ["copr", "enable", "-y", "scottames/ghostty"]));
+            commands.push(CommandSpec::new(
+                "dnf",
+                ["install", "-y", "dnf-plugins-core"],
+            ));
+            commands.push(CommandSpec::new(
+                "dnf",
+                ["copr", "enable", "-y", "scottames/ghostty"],
+            ));
             commands.push(CommandSpec::new("dnf", ["install", "-y", "ghostty"]));
         }
         ActionId::Zed if !zed_installed(&current_home_dir()) => {
             commands.extend(user_shell_commands(
                 info,
                 "Install Zed",
-                r#"curl -f https://zed.dev/install.sh | sh; touch "$HOME/.bashrc"; if ! grep -q "local/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if [ -f "$HOME/.zshrc" ]; then if ! grep -q "local/bin" "$HOME/.zshrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.zshrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.zshrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.zshrc"; fi; fi"#,
+                r#"curl -f https://zed.dev/install.sh | sh; cat > "$HOME/.postora-paths.sh" <<'EOF'
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+    *":$HOME/.local/zed.app/bin:"*) ;;
+    *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;;
+esac
+EOF
+touch "$HOME/.bashrc"; grep -q ".postora-paths.sh" "$HOME/.bashrc" 2>/dev/null || printf '\n# Postora shared PATH setup\nif [ -f "$HOME/.postora-paths.sh" ]; then\n    . "$HOME/.postora-paths.sh"\nfi\n' >> "$HOME/.bashrc"; if command -v zsh >/dev/null 2>&1 || [ -f "$HOME/.zshrc" ]; then touch "$HOME/.zshrc"; grep -q ".postora-paths.sh" "$HOME/.zshrc" 2>/dev/null || printf '\n# Postora shared PATH setup\nif [ -f "$HOME/.postora-paths.sh" ]; then\n    . "$HOME/.postora-paths.sh"\nfi\n' >> "$HOME/.zshrc"; fi"#,
             ));
         }
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
@@ -776,7 +833,9 @@ pub fn commands_for_action(
         ActionId::DevTools => {
             let mut args = vec!["install".to_string(), "-y".to_string()];
             let mut needed = false;
-            for pkg in &["git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip"] {
+            for pkg in &[
+                "git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip",
+            ] {
                 if !info.installed_packages.contains(*pkg) {
                     args.push(pkg.to_string());
                     needed = true;
@@ -801,7 +860,10 @@ pub fn commands_for_action(
         ActionId::Starship if !starship_configured(&current_home_dir()) => {
             commands.push(CommandSpec::new(
                 "sh",
-                ["-c", "curl -sS https://starship.rs/install.sh | sh -s -- -y"],
+                [
+                    "-c",
+                    "curl -sS https://starship.rs/install.sh | sh -s -- -y",
+                ],
             ));
             commands.extend(user_shell_commands(
                 info,
@@ -809,35 +871,77 @@ pub fn commands_for_action(
                 r##"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || printf '\n# Starship shell prompt (only if in bash)\nif [ -n "$BASH_VERSION" ]; then\n    eval "$(starship init bash)"\nfi\n' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc""##,
             ));
         }
-        ActionId::FlatpakChrome => commands.extend(flatpak_install_commands("com.google.Chrome", info)),
-        ActionId::FlatpakFirefox => commands.extend(flatpak_install_commands("org.mozilla.firefox", info)),
-        ActionId::FlatpakBrave => commands.extend(flatpak_install_commands("com.brave.Browser", info)),
-        ActionId::FlatpakZed => commands.extend(flatpak_install_commands("dev.zed.Zed", info)),
-        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_install_commands("io.podman_desktop.PodmanDesktop", info)),
-        ActionId::FlatpakDbeaver => commands.extend(flatpak_install_commands("io.dbeaver.DBeaverCommunity", info)),
-        ActionId::FlatpakPostman => commands.extend(flatpak_install_commands("com.getpostman.Postman", info)),
-        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_install_commands("org.onlyoffice.desktopeditors", info)),
-        ActionId::FlatpakObsidian => commands.extend(flatpak_install_commands("md.obsidian.Obsidian", info)),
-        ActionId::FlatpakBitwarden => commands.extend(flatpak_install_commands("com.bitwarden.desktop", info)),
+        ActionId::FlatpakChrome => {
+            commands.extend(flatpak_install_commands("com.google.Chrome", info))
+        }
+        ActionId::FlatpakFirefox => {
+            commands.extend(flatpak_install_commands("org.mozilla.firefox", info))
+        }
+        ActionId::FlatpakBrave => {
+            commands.extend(flatpak_install_commands("com.brave.Browser", info))
+        }
+        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_install_commands(
+            "io.podman_desktop.PodmanDesktop",
+            info,
+        )),
+        ActionId::FlatpakDbeaver => commands.extend(flatpak_install_commands(
+            "io.dbeaver.DBeaverCommunity",
+            info,
+        )),
+        ActionId::FlatpakPostman => {
+            commands.extend(flatpak_install_commands("com.getpostman.Postman", info))
+        }
+        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_install_commands(
+            "org.onlyoffice.desktopeditors",
+            info,
+        )),
+        ActionId::FlatpakObsidian => {
+            commands.extend(flatpak_install_commands("md.obsidian.Obsidian", info))
+        }
+        ActionId::FlatpakBitwarden => {
+            commands.extend(flatpak_install_commands("com.bitwarden.desktop", info))
+        }
         ActionId::FlatpakVlc => commands.extend(flatpak_install_commands("org.videolan.VLC", info)),
-        ActionId::FlatpakObsStudio => commands.extend(flatpak_install_commands("com.obsproject.Studio", info)),
+        ActionId::FlatpakObsStudio => {
+            commands.extend(flatpak_install_commands("com.obsproject.Studio", info))
+        }
         ActionId::FlatpakGimp => commands.extend(flatpak_install_commands("org.gimp.GIMP", info)),
-        ActionId::FlatpakKdenlive => commands.extend(flatpak_install_commands("org.kde.kdenlive", info)),
-        ActionId::FlatpakLocalSend => commands.extend(flatpak_install_commands("org.localsend.localsend_app", info)),
-        ActionId::FlatpakFlameshot => commands.extend(flatpak_install_commands("org.flameshot.Flameshot", info)),
-        ActionId::FlatpakFlatseal => commands.extend(flatpak_install_commands("com.github.tchx84.Flatseal", info)),
-        ActionId::FlatpakBottles => commands.extend(flatpak_install_commands("com.usebottles.bottles", info)),
+        ActionId::FlatpakKdenlive => {
+            commands.extend(flatpak_install_commands("org.kde.kdenlive", info))
+        }
+        ActionId::FlatpakLocalSend => commands.extend(flatpak_install_commands(
+            "org.localsend.localsend_app",
+            info,
+        )),
+        ActionId::FlatpakFlameshot => {
+            commands.extend(flatpak_install_commands("org.flameshot.Flameshot", info))
+        }
+        ActionId::FlatpakFlatseal => {
+            commands.extend(flatpak_install_commands("com.github.tchx84.Flatseal", info))
+        }
+        ActionId::FlatpakBottles => {
+            commands.extend(flatpak_install_commands("com.usebottles.bottles", info))
+        }
         action if nerd_font(action).is_some() => {
             let font = nerd_font(action).expect("font action exists");
             let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
             let archive = format!("/tmp/postora-{}.zip", font.asset_slug);
-            commands.push(CommandSpec::new("dnf", ["install", "-y", "curl", "unzip", "fontconfig"]));
+            commands.push(CommandSpec::new(
+                "dnf",
+                ["install", "-y", "curl", "unzip", "fontconfig"],
+            ));
             commands.push(CommandSpec::new(
                 "curl",
                 ["-fL", "-o", archive.as_str(), font.url],
             ));
-            commands.push(CommandSpec::new("install", ["-d", "-m", "0755", destination.as_str()]));
-            commands.push(CommandSpec::new("unzip", ["-o", archive.as_str(), "-d", destination.as_str()]));
+            commands.push(CommandSpec::new(
+                "install",
+                ["-d", "-m", "0755", destination.as_str()],
+            ));
+            commands.push(CommandSpec::new(
+                "unzip",
+                ["-o", archive.as_str(), "-d", destination.as_str()],
+            ));
             commands.push(CommandSpec::new("fc-cache", ["-f", destination.as_str()]));
         }
         _ => {}
@@ -847,7 +951,10 @@ pub fn commands_for_action(
 
 fn flatpak_uninstall_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec> {
     let mut commands = Vec::new();
-    commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", app_id]));
+    commands.push(CommandSpec::new(
+        "flatpak",
+        ["uninstall", "--system", "-y", app_id],
+    ));
     commands.extend(user_shell_commands(
         info,
         &format!("Uninstall user-level Flatpak {}", app_id),
@@ -863,33 +970,83 @@ pub fn uninstall_commands_for_action(
 ) -> Result<Vec<CommandSpec>, PlannerError> {
     let mut commands = Vec::new();
     match id {
-        ActionId::FlatpakChrome => commands.extend(flatpak_uninstall_commands("com.google.Chrome", info)),
-        ActionId::FlatpakFirefox => commands.extend(flatpak_uninstall_commands("org.mozilla.firefox", info)),
-        ActionId::FlatpakBrave => commands.extend(flatpak_uninstall_commands("com.brave.Browser", info)),
-        ActionId::FlatpakZed => commands.extend(flatpak_uninstall_commands("dev.zed.Zed", info)),
-        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_uninstall_commands("io.podman_desktop.PodmanDesktop", info)),
-        ActionId::FlatpakDbeaver => commands.extend(flatpak_uninstall_commands("io.dbeaver.DBeaverCommunity", info)),
-        ActionId::FlatpakPostman => commands.extend(flatpak_uninstall_commands("com.getpostman.Postman", info)),
-        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_uninstall_commands("org.onlyoffice.desktopeditors", info)),
-        ActionId::FlatpakObsidian => commands.extend(flatpak_uninstall_commands("md.obsidian.Obsidian", info)),
-        ActionId::FlatpakBitwarden => commands.extend(flatpak_uninstall_commands("com.bitwarden.desktop", info)),
-        ActionId::FlatpakVlc => commands.extend(flatpak_uninstall_commands("org.videolan.VLC", info)),
-        ActionId::FlatpakObsStudio => commands.extend(flatpak_uninstall_commands("com.obsproject.Studio", info)),
+        ActionId::FlatpakChrome => {
+            commands.extend(flatpak_uninstall_commands("com.google.Chrome", info))
+        }
+        ActionId::FlatpakFirefox => {
+            commands.extend(flatpak_uninstall_commands("org.mozilla.firefox", info))
+        }
+        ActionId::FlatpakBrave => {
+            commands.extend(flatpak_uninstall_commands("com.brave.Browser", info))
+        }
+        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_uninstall_commands(
+            "io.podman_desktop.PodmanDesktop",
+            info,
+        )),
+        ActionId::FlatpakDbeaver => commands.extend(flatpak_uninstall_commands(
+            "io.dbeaver.DBeaverCommunity",
+            info,
+        )),
+        ActionId::FlatpakPostman => {
+            commands.extend(flatpak_uninstall_commands("com.getpostman.Postman", info))
+        }
+        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_uninstall_commands(
+            "org.onlyoffice.desktopeditors",
+            info,
+        )),
+        ActionId::FlatpakObsidian => {
+            commands.extend(flatpak_uninstall_commands("md.obsidian.Obsidian", info))
+        }
+        ActionId::FlatpakBitwarden => {
+            commands.extend(flatpak_uninstall_commands("com.bitwarden.desktop", info))
+        }
+        ActionId::FlatpakVlc => {
+            commands.extend(flatpak_uninstall_commands("org.videolan.VLC", info))
+        }
+        ActionId::FlatpakObsStudio => {
+            commands.extend(flatpak_uninstall_commands("com.obsproject.Studio", info))
+        }
         ActionId::FlatpakGimp => commands.extend(flatpak_uninstall_commands("org.gimp.GIMP", info)),
-        ActionId::FlatpakKdenlive => commands.extend(flatpak_uninstall_commands("org.kde.kdenlive", info)),
-        ActionId::FlatpakLocalSend => commands.extend(flatpak_uninstall_commands("org.localsend.localsend_app", info)),
-        ActionId::FlatpakFlameshot => commands.extend(flatpak_uninstall_commands("org.flameshot.Flameshot", info)),
-        ActionId::FlatpakFlatseal => commands.extend(flatpak_uninstall_commands("com.github.tchx84.Flatseal", info)),
-        ActionId::FlatpakBottles => commands.extend(flatpak_uninstall_commands("com.usebottles.bottles", info)),
+        ActionId::FlatpakKdenlive => {
+            commands.extend(flatpak_uninstall_commands("org.kde.kdenlive", info))
+        }
+        ActionId::FlatpakLocalSend => commands.extend(flatpak_uninstall_commands(
+            "org.localsend.localsend_app",
+            info,
+        )),
+        ActionId::FlatpakFlameshot => {
+            commands.extend(flatpak_uninstall_commands("org.flameshot.Flameshot", info))
+        }
+        ActionId::FlatpakFlatseal => commands.extend(flatpak_uninstall_commands(
+            "com.github.tchx84.Flatseal",
+            info,
+        )),
+        ActionId::FlatpakBottles => {
+            commands.extend(flatpak_uninstall_commands("com.usebottles.bottles", info))
+        }
         ActionId::Ghostty => commands.push(CommandSpec::new("dnf", ["remove", "-y", "ghostty"])),
         ActionId::Vlc => commands.push(CommandSpec::new("dnf", ["remove", "-y", "vlc"])),
-        ActionId::Kvantum => commands.push(CommandSpec::new("dnf", ["remove", "-y", "kvantum", "kvantum-qt5", "papirus-icon-theme"])),
-        ActionId::DevTools => commands.push(CommandSpec::new("dnf", ["remove", "-y", "git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip"])),
+        ActionId::Kvantum => commands.push(CommandSpec::new(
+            "dnf",
+            [
+                "remove",
+                "-y",
+                "kvantum",
+                "kvantum-qt5",
+                "papirus-icon-theme",
+            ],
+        )),
+        ActionId::DevTools => commands.push(CommandSpec::new(
+            "dnf",
+            [
+                "remove", "-y", "git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip",
+            ],
+        )),
         ActionId::Zed => {
             commands.extend(user_shell_commands(
                 info,
                 "Uninstall Zed",
-                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed" "$HOME/.local/share/applications/dev.zed.Zed.desktop" "$HOME/.local/share/zed"; sed -i '/zed.app\/bin/d' "$HOME/.bashrc" "$HOME/.zshrc" 2>/dev/null || true"#,
+                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed" "$HOME/.local/share/applications/dev.zed.Zed.desktop" "$HOME/.local/share/zed"; rm -f "$HOME/.postora-paths.sh"; sed -i '/.postora-paths.sh/d' "$HOME/.bashrc" "$HOME/.zshrc" 2>/dev/null || true"#,
             ));
         }
         ActionId::Starship => {
@@ -904,7 +1061,10 @@ pub fn uninstall_commands_for_action(
             let font = nerd_font(action).expect("font action exists");
             let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
             commands.push(CommandSpec::new("rm", ["-rf", destination.as_str()]));
-            commands.push(CommandSpec::new("fc-cache", ["-f", "/usr/local/share/fonts/postora"]));
+            commands.push(CommandSpec::new(
+                "fc-cache",
+                ["-f", "/usr/local/share/fonts/postora"],
+            ));
         }
         _ => {}
     }
@@ -921,16 +1081,69 @@ pub struct NerdFont {
 
 pub fn nerd_fonts() -> &'static [NerdFont] {
     &[
-        NerdFont { id: ActionId::FontFiraCode, title: "FiraCode", asset_slug: "FiraCode", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip" },
-        NerdFont { id: ActionId::FontZedMono, title: "ZedMono", asset_slug: "ZedMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/ZedMono.zip" },
-        NerdFont { id: ActionId::FontJetBrainsMono, title: "JetBrainsMono", asset_slug: "JetBrainsMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip" },
-        NerdFont { id: ActionId::FontHack, title: "Hack", asset_slug: "Hack", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Hack.zip" },
-        NerdFont { id: ActionId::FontMeslo, title: "Meslo", asset_slug: "Meslo", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Meslo.zip" },
-        NerdFont { id: ActionId::FontCaskaydiaCove, title: "CaskaydiaCove", asset_slug: "CaskaydiaCove", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/CaskaydiaCove.zip" },
-        NerdFont { id: ActionId::FontSourceCodePro, title: "SourceCodePro", asset_slug: "SourceCodePro", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/SourceCodePro.zip" },
-        NerdFont { id: ActionId::FontUbuntuMono, title: "UbuntuMono", asset_slug: "UbuntuMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/UbuntuMono.zip" },
-        NerdFont { id: ActionId::FontRobotoMono, title: "RobotoMono", asset_slug: "RobotoMono", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/RobotoMono.zip" },
-        NerdFont { id: ActionId::FontIosevka, title: "Iosevka", asset_slug: "Iosevka", url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Iosevka.zip" },
+        NerdFont {
+            id: ActionId::FontFiraCode,
+            title: "FiraCode",
+            asset_slug: "FiraCode",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip",
+        },
+        NerdFont {
+            id: ActionId::FontZedMono,
+            title: "ZedMono",
+            asset_slug: "ZedMono",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/ZedMono.zip",
+        },
+        NerdFont {
+            id: ActionId::FontJetBrainsMono,
+            title: "JetBrainsMono",
+            asset_slug: "JetBrainsMono",
+            url:
+                "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip",
+        },
+        NerdFont {
+            id: ActionId::FontHack,
+            title: "Hack",
+            asset_slug: "Hack",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Hack.zip",
+        },
+        NerdFont {
+            id: ActionId::FontMeslo,
+            title: "Meslo",
+            asset_slug: "Meslo",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Meslo.zip",
+        },
+        NerdFont {
+            id: ActionId::FontCaskaydiaCove,
+            title: "CaskaydiaCove",
+            asset_slug: "CaskaydiaCove",
+            url:
+                "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/CaskaydiaCove.zip",
+        },
+        NerdFont {
+            id: ActionId::FontSourceCodePro,
+            title: "SourceCodePro",
+            asset_slug: "SourceCodePro",
+            url:
+                "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/SourceCodePro.zip",
+        },
+        NerdFont {
+            id: ActionId::FontUbuntuMono,
+            title: "UbuntuMono",
+            asset_slug: "UbuntuMono",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/UbuntuMono.zip",
+        },
+        NerdFont {
+            id: ActionId::FontRobotoMono,
+            title: "RobotoMono",
+            asset_slug: "RobotoMono",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/RobotoMono.zip",
+        },
+        NerdFont {
+            id: ActionId::FontIosevka,
+            title: "Iosevka",
+            asset_slug: "Iosevka",
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/Iosevka.zip",
+        },
     ]
 }
 
@@ -950,7 +1163,11 @@ fn current_user_name() -> Option<String> {
         .ok()
         .filter(|user| !user.is_empty())
         .or_else(|| std::env::var("USER").ok().filter(|user| !user.is_empty()))
-        .or_else(|| std::env::var("SUDO_USER").ok().filter(|user| !user.is_empty()))
+        .or_else(|| {
+            std::env::var("SUDO_USER")
+                .ok()
+                .filter(|user| !user.is_empty())
+        })
 }
 
 fn zed_installed(home: &Path) -> bool {
@@ -985,28 +1202,38 @@ fn default_shell_is_zsh() -> bool {
     let Some(user) = current_user_name() else {
         return false;
     };
-    let passwd_entry = command_output("getent", ["passwd", user.as_str()])
-        .or_else(|| fs::read_to_string("/etc/passwd").ok().and_then(|contents| {
+    let passwd_entry = command_output("getent", ["passwd", user.as_str()]).or_else(|| {
+        fs::read_to_string("/etc/passwd").ok().and_then(|contents| {
             contents
                 .lines()
                 .find(|line| line.split(':').next() == Some(user.as_str()))
                 .map(ToOwned::to_owned)
-        }));
+        })
+    });
     let Some(entry) = passwd_entry else {
         return false;
     };
-    entry.split(':').nth(6).map(|shell| shell.ends_with("/zsh")).unwrap_or(false)
+    entry
+        .split(':')
+        .nth(6)
+        .map(|shell| shell.ends_with("/zsh"))
+        .unwrap_or(false)
 }
 
 fn file_contains(path: &Path, needle: &str) -> bool {
-    fs::read_to_string(path).map(|content| content.contains(needle)).unwrap_or(false)
+    fs::read_to_string(path)
+        .map(|content| content.contains(needle))
+        .unwrap_or(false)
 }
 
 fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<CommandSpec> {
     let Some(user) = info_target_user() else {
         return vec![CommandSpec::new(
             "sh",
-            ["-c", &format!("echo 'No target user was provided for {label}' >&2; exit 1")],
+            [
+                "-c",
+                &format!("echo 'No target user was provided for {label}' >&2; exit 1"),
+            ],
         )];
     };
     let home = std::env::var("POSTORA_TARGET_HOME")
@@ -1015,7 +1242,14 @@ fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<Com
         .unwrap_or_else(|| format!("/home/{user}"));
     vec![CommandSpec::new(
         "runuser",
-        ["-u", user.as_str(), "--", "sh", "-c", &format!("export HOME='{}'; {}", home.replace('\'', "'\\''"), script)],
+        [
+            "-u",
+            user.as_str(),
+            "--",
+            "sh",
+            "-c",
+            &format!("export HOME='{}'; {}", home.replace('\'', "'\\''"), script),
+        ],
     )]
 }
 
@@ -1029,9 +1263,15 @@ pub fn commands_for_request(
 ) -> Result<Vec<(ActionId, CommandSpec)>, PlannerError> {
     let version = info.validate_supported()?;
     if !request.run_update && request.detected_fedora_version != version {
-        return Err(PlannerError::UnsupportedFedora(request.detected_fedora_version));
+        return Err(PlannerError::UnsupportedFedora(
+            request.detected_fedora_version,
+        ));
     }
-    let available: HashSet<ActionId> = build_plan(info)?.actions.into_iter().map(|a| a.id).collect();
+    let available: HashSet<ActionId> = build_plan(info)?
+        .actions
+        .into_iter()
+        .map(|a| a.id)
+        .collect();
     let mut out = Vec::new();
     if request.run_update {
         out.push((
@@ -1078,7 +1318,10 @@ pub fn commands_for_request(
             let action_id = out[idx].0;
             out.insert(
                 idx + 1,
-                (action_id, CommandSpec::new("dnf", ["update", "-y", "--refresh"])),
+                (
+                    action_id,
+                    CommandSpec::new("dnf", ["update", "-y", "--refresh"]),
+                ),
             );
         }
     }
@@ -1094,11 +1337,18 @@ pub fn rpmfusion_release_url(kind: &str, version: u16) -> String {
 
 pub fn openh264_command(version: u16) -> CommandSpec {
     if version <= 40 {
-        CommandSpec::new("dnf", ["config-manager", "--enable", "fedora-cisco-openh264"])
+        CommandSpec::new(
+            "dnf",
+            ["config-manager", "--enable", "fedora-cisco-openh264"],
+        )
     } else {
         CommandSpec::new(
             "dnf",
-            ["config-manager", "setopt", "fedora-cisco-openh264.enabled=1"],
+            [
+                "config-manager",
+                "setopt",
+                "fedora-cisco-openh264.enabled=1",
+            ],
         )
     }
 }
@@ -1106,20 +1356,40 @@ pub fn openh264_command(version: u16) -> CommandSpec {
 pub fn detect_system() -> SystemInfo {
     let os_release = parse_os_release("/etc/os-release");
     let os_id = os_release.get("ID").cloned().unwrap_or_default();
-    let os_name = os_release.get("NAME").cloned().unwrap_or_else(|| os_id.clone());
+    let os_name = os_release
+        .get("NAME")
+        .cloned()
+        .unwrap_or_else(|| os_id.clone());
     let fedora_version = command_output("rpm", ["-E", "%fedora"])
         .and_then(|s| s.trim().parse::<u16>().ok())
-        .or_else(|| os_release.get("VERSION_ID").and_then(|s| s.parse::<u16>().ok()));
+        .or_else(|| {
+            os_release
+                .get("VERSION_ID")
+                .and_then(|s| s.parse::<u16>().ok())
+        });
 
     SystemInfo {
         os_id,
         os_name,
         fedora_version,
-        arch: command_output("uname", ["-m"]).unwrap_or_default().trim().into(),
+        arch: command_output("uname", ["-m"])
+            .unwrap_or_default()
+            .trim()
+            .into(),
         is_atomic: command_exists("rpm-ostree") || Path::new("/run/ostree-booted").exists(),
         has_dnf: command_exists("dnf"),
-        has_internet: command_status("curl", ["-fsI", "--connect-timeout", "3", "https://mirrors.fedoraproject.org"])
-            || command_status("ping", ["-c", "1", "-W", "3", "mirrors.fedoraproject.org"]),
+        has_internet: command_status(
+            "curl",
+            [
+                "-fsI",
+                "--connect-timeout",
+                "3",
+                "https://mirrors.fedoraproject.org",
+            ],
+        ) || command_status(
+            "ping",
+            ["-c", "1", "-W", "3", "mirrors.fedoraproject.org"],
+        ),
         secure_boot: detect_secure_boot(),
         gpu_vendors: detect_gpu_vendors(),
         installed_packages: installed_packages(),
@@ -1145,7 +1415,9 @@ fn repo_enabled(info: &SystemInfo, repo: &str) -> bool {
 }
 
 fn packages_installed(info: &SystemInfo, packages: &[&str]) -> bool {
-    packages.iter().all(|package| info.installed_packages.contains(*package))
+    packages
+        .iter()
+        .all(|package| info.installed_packages.contains(*package))
 }
 
 fn detect_secure_boot() -> SecureBootState {
@@ -1197,8 +1469,18 @@ fn installed_packages() -> BTreeSet<String> {
 fn enabled_repos() -> BTreeSet<String> {
     let mut repos = BTreeSet::new();
     let outputs = [
-        command_output("dnf", ["repoquery", "--repoid", "*", "--qf", "%{repoid}", "fedora-release"])
-            .unwrap_or_default(),
+        command_output(
+            "dnf",
+            [
+                "repoquery",
+                "--repoid",
+                "*",
+                "--qf",
+                "%{repoid}",
+                "fedora-release",
+            ],
+        )
+        .unwrap_or_default(),
         command_output("dnf", ["repolist", "--enabled"]).unwrap_or_default(),
     ];
     for output in outputs {
@@ -1243,6 +1525,7 @@ fn flatpak_install_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec>
             "flatpak",
             [
                 "remote-add",
+                "--system",
                 "--if-not-exists",
                 "flathub",
                 "https://dl.flathub.org/repo/flathub.flatpakrepo",
@@ -1251,9 +1534,12 @@ fn flatpak_install_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec>
     }
     commands.push(CommandSpec::new(
         "flatpak",
-        ["remote-modify", "--enable", "flathub"],
+        ["remote-modify", "--system", "--enable", "flathub"],
     ));
-    commands.push(CommandSpec::new("flatpak", ["install", "-y", "flathub", app_id]));
+    commands.push(CommandSpec::new(
+        "flatpak",
+        ["install", "--system", "-y", "flathub", app_id],
+    ));
     commands
 }
 
@@ -1325,7 +1611,10 @@ mod tests {
     fn openh264_uses_legacy_enable_on_fedora_40() {
         assert_eq!(
             openh264_command(40),
-            CommandSpec::new("dnf", ["config-manager", "--enable", "fedora-cisco-openh264"])
+            CommandSpec::new(
+                "dnf",
+                ["config-manager", "--enable", "fedora-cisco-openh264"]
+            )
         );
     }
 
@@ -1336,7 +1625,11 @@ mod tests {
                 openh264_command(version),
                 CommandSpec::new(
                     "dnf",
-                    ["config-manager", "setopt", "fedora-cisco-openh264.enabled=1"]
+                    [
+                        "config-manager",
+                        "setopt",
+                        "fedora-cisco-openh264.enabled=1"
+                    ]
                 )
             );
         }
@@ -1348,7 +1641,9 @@ mod tests {
         assert_eq!(GpuVendor::from_pci_vendor_id("1002"), GpuVendor::Amd);
         assert_eq!(GpuVendor::from_pci_vendor_id("8086"), GpuVendor::Intel);
         assert_eq!(
-            GpuVendor::from_lspci_line("01:00.0 VGA compatible controller: NVIDIA Corporation AD104"),
+            GpuVendor::from_lspci_line(
+                "01:00.0 VGA compatible controller: NVIDIA Corporation AD104"
+            ),
             Some(GpuVendor::Nvidia)
         );
     }
@@ -1372,7 +1667,8 @@ mod tests {
     fn planner_snapshots_cover_supported_versions() {
         for version in [40, 41, 42, 43, 44] {
             let info = base_info(version);
-            let commands = commands_for_action(ActionId::CiscoOpenh264Repo, version, &info).unwrap();
+            let commands =
+                commands_for_action(ActionId::CiscoOpenh264Repo, version, &info).unwrap();
             assert_eq!(commands.len(), 1);
             assert_eq!(commands[0], openh264_command(version));
         }

@@ -1,5 +1,5 @@
 Name:           postora
-Version:        0.0.4
+Version:        0.0.5
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -56,6 +56,11 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.5-1
+- Move optional tools into a separate Tools & Extras tab and add a KDE category
+- Remove Flatpak Zed in favor of the official zed.dev installer with shared Bash/Zsh PATH setup
+- Move Development Tools out of Applications and into Tools & Extras
+
 * Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.4-1
 - Implement app uninstallation directly from the GUI (dnf, flatpak, zed, starship, nerd-fonts)
 - Implement BASH_VERSION shell path sync guards in .bashrc to prevent shopt errors under Zsh

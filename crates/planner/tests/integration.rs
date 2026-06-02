@@ -1,6 +1,6 @@
 use postora_planner::{
-    build_plan, commands_for_request, ActionId, ApplyRequest, GpuVendor, PlannerError, SecureBootState,
-    SystemInfo,
+    build_plan, commands_for_request, ActionId, ApplyRequest, GpuVendor, PlannerError,
+    SecureBootState, SystemInfo,
 };
 use std::collections::BTreeSet;
 use uuid::Uuid;
@@ -41,13 +41,16 @@ fn dnf_update_is_inserted_after_repos() {
         .iter()
         .map(|(_, command)| command.display())
         .collect::<Vec<_>>();
-    
+
     assert_eq!(rendered.len(), 5);
     assert!(rendered[0].contains("mirrors.rpmfusion.org"));
     assert_eq!(rendered[1], "dnf update -y --refresh");
     assert!(rendered[2].contains("dnf install -y flatpak"));
     assert!(rendered[3].contains("flatpak remote-add"));
-    assert_eq!(rendered[4], "flatpak remote-modify --enable flathub");
+    assert_eq!(
+        rendered[4],
+        "flatpak remote-modify --system --enable flathub"
+    );
 }
 
 #[test]
@@ -73,11 +76,15 @@ fn command_planner_snapshots_for_fedora_40_to_44() {
             .iter()
             .map(|(_, command)| command.display())
             .collect::<Vec<_>>();
-        assert!(rendered.iter().any(|cmd| cmd.contains(&format!(
-            "rpmfusion-free-release-{version}.noarch.rpm"
-        ))));
-        assert!(rendered.iter().any(|cmd| cmd.contains("flatpak remote-add --if-not-exists")));
-        assert!(rendered.iter().any(|cmd| cmd.contains("dnf swap -y ffmpeg-free ffmpeg")));
+        assert!(rendered
+            .iter()
+            .any(|cmd| cmd.contains(&format!("rpmfusion-free-release-{version}.noarch.rpm"))));
+        assert!(rendered
+            .iter()
+            .any(|cmd| cmd.contains("flatpak remote-add --system --if-not-exists")));
+        assert!(rendered
+            .iter()
+            .any(|cmd| cmd.contains("dnf swap -y ffmpeg-free ffmpeg")));
     }
 }
 

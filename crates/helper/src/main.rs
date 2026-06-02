@@ -30,7 +30,8 @@ fn run() -> Result<()> {
     io::stdin()
         .read_to_string(&mut input)
         .context("failed to read helper JSON request from stdin")?;
-    let request: ApplyRequest = serde_json::from_str(&input).context("malformed helper JSON request")?;
+    let request: ApplyRequest =
+        serde_json::from_str(&input).context("malformed helper JSON request")?;
     emit(&HelperEvent::Started {
         plan_id: &request.plan_id,
     })?;
@@ -73,8 +74,14 @@ fn run_command(command: &CommandSpec) -> Result<()> {
         .spawn()
         .with_context(|| format!("failed to start {}", command.program))?;
 
-    let stdout = child.stdout.take().context("failed to capture command stdout")?;
-    let stderr = child.stderr.take().context("failed to capture command stderr")?;
+    let stdout = child
+        .stdout
+        .take()
+        .context("failed to capture command stdout")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("failed to capture command stderr")?;
     let (sender, receiver) = mpsc::channel::<(bool, String)>();
 
     let stdout_sender = sender.clone();
@@ -101,9 +108,7 @@ fn run_command(command: &CommandSpec) -> Result<()> {
             if is_stderr {
                 stderr_lines.push(line.clone());
             }
-            emit(&HelperEvent::Progress {
-                message: line,
-            })?;
+            emit(&HelperEvent::Progress { message: line })?;
         }
     }
 

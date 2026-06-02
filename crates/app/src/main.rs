@@ -1,9 +1,10 @@
 use adw::prelude::*;
-use postora_planner::{
-    build_plan, detect_system, Action, ActionCategory, ActionId, ApplyRequest, Plan, SecureBootState, SystemInfo,
-};
 use gtk::glib;
 use gtk::{Align, Orientation, PolicyType, WrapMode};
+use postora_planner::{
+    build_plan, detect_system, Action, ActionCategory, ActionId, ApplyRequest, Plan,
+    SecureBootState, SystemInfo,
+};
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::io::{BufRead, BufReader, Write};
@@ -71,7 +72,9 @@ fn build_ui(app: &adw::Application) {
         .build();
     status_group.add(&status_row);
 
-    let action_group = adw::PreferencesGroup::builder().title("Fedora Setup").build();
+    let action_group = adw::PreferencesGroup::builder()
+        .title("Fedora Setup")
+        .build();
     let empty_row = adw::ActionRow::builder()
         .title("Analyze system to see available actions")
         .build();
@@ -97,8 +100,12 @@ fn build_ui(app: &adw::Application) {
         .description("Install system utilities and helper tools.")
         .build();
     let extra_group = adw::PreferencesGroup::builder()
-        .title("Extra Apps")
-        .description("Optional application and shell setup.")
+        .title("Command Line & Editors")
+        .description("Install optional developer tools, editors, shells, and prompts.")
+        .build();
+    let kde_group = adw::PreferencesGroup::builder()
+        .title("KDE")
+        .description("Install KDE-focused appearance and desktop tools.")
         .build();
     let fonts_group = adw::PreferencesGroup::builder()
         .title("Nerd Fonts")
@@ -153,11 +160,23 @@ fn build_ui(app: &adw::Application) {
     setup_page.set_margin_end(18);
     setup_page.append(&status_group);
     setup_page.append(&action_group);
-    setup_page.append(&extra_group);
 
     let setup_scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never)
         .child(&setup_page)
+        .build();
+
+    let extra_page = gtk::Box::new(Orientation::Vertical, 12);
+    extra_page.set_margin_top(18);
+    extra_page.set_margin_bottom(18);
+    extra_page.set_margin_start(18);
+    extra_page.set_margin_end(18);
+    extra_page.append(&extra_group);
+    extra_page.append(&kde_group);
+
+    let extra_scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never)
+        .child(&extra_page)
         .build();
 
     let apps_page = gtk::Box::new(Orientation::Vertical, 12);
@@ -196,6 +215,9 @@ fn build_ui(app: &adw::Application) {
     let stack_page_setup = view_stack.add_titled(&setup_scroller, Some("setup"), "System Setup");
     stack_page_setup.set_icon_name(Some("preferences-system-symbolic"));
 
+    let stack_page_extra = view_stack.add_titled(&extra_scroller, Some("extras"), "Tools & Extras");
+    stack_page_extra.set_icon_name(Some("applications-utilities-symbolic"));
+
     let stack_page_apps = view_stack.add_titled(&apps_scroller, Some("apps"), "Applications");
     stack_page_apps.set_icon_name(Some("application-x-executable-symbolic"));
 
@@ -222,7 +244,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.0.4")
+                .version("0.0.5")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
@@ -325,6 +347,7 @@ fn build_ui(app: &adw::Application) {
         let status_row = status_row.clone();
         let action_group = action_group.clone();
         let extra_group = extra_group.clone();
+        let kde_group = kde_group.clone();
         let fonts_group = fonts_group.clone();
         let empty_row = empty_row.clone();
         let progress = progress.clone();
@@ -363,9 +386,14 @@ fn build_ui(app: &adw::Application) {
                                 ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
                                 ActionCategory::WebBrowsers => browsers_group.remove(&widget.row),
                                 ActionCategory::DevDatabase => dev_group.remove(&widget.row),
-                                ActionCategory::OfficeProductivity => office_group.remove(&widget.row),
+                                ActionCategory::OfficeProductivity => {
+                                    office_group.remove(&widget.row)
+                                }
                                 ActionCategory::MediaCreative => creative_group.remove(&widget.row),
-                                ActionCategory::UtilitiesTools => utilities_group.remove(&widget.row),
+                                ActionCategory::UtilitiesTools => {
+                                    utilities_group.remove(&widget.row)
+                                }
+                                ActionCategory::Kde => kde_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_some() {
@@ -374,6 +402,7 @@ fn build_ui(app: &adw::Application) {
                         render_actions(
                             &action_group,
                             &extra_group,
+                            &kde_group,
                             &fonts_group,
                             &browsers_group,
                             &dev_group,
@@ -399,7 +428,9 @@ fn build_ui(app: &adw::Application) {
                         status_row.set_subtitle(&format_system_subtitle(&system));
                         progress.set_fraction(0.0);
                         progress.set_text(Some("Analysis complete"));
-                        apply_button.set_sensitive(plan.actions.iter().any(|action| !action.already_complete));
+                        apply_button.set_sensitive(
+                            plan.actions.iter().any(|action| !action.already_complete),
+                        );
                         analyze_button_clone.set_sensitive(true);
                         view_stack_clone.set_sensitive(true);
                         window_clone.set_cursor(None);
@@ -416,9 +447,14 @@ fn build_ui(app: &adw::Application) {
                                 ActionCategory::NerdFonts => fonts_group.remove(&widget.row),
                                 ActionCategory::WebBrowsers => browsers_group.remove(&widget.row),
                                 ActionCategory::DevDatabase => dev_group.remove(&widget.row),
-                                ActionCategory::OfficeProductivity => office_group.remove(&widget.row),
+                                ActionCategory::OfficeProductivity => {
+                                    office_group.remove(&widget.row)
+                                }
                                 ActionCategory::MediaCreative => creative_group.remove(&widget.row),
-                                ActionCategory::UtilitiesTools => utilities_group.remove(&widget.row),
+                                ActionCategory::UtilitiesTools => {
+                                    utilities_group.remove(&widget.row)
+                                }
+                                ActionCategory::Kde => kde_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_none() {
@@ -433,14 +469,22 @@ fn build_ui(app: &adw::Application) {
                         analyze_button_clone.set_sensitive(true);
                         view_stack_clone.set_sensitive(true);
                         window_clone.set_cursor(None);
-                        append_log(&log_view, &log_scroller, &format!("Analysis failed: {error}"));
+                        append_log(
+                            &log_view,
+                            &log_scroller,
+                            &format!("Analysis failed: {error}"),
+                        );
                     }
                     WorkerMessage::HelperLine(line) => {
                         progress.pulse();
                         progress.set_text(Some("Applying changes"));
                         append_log(&log_view, &log_scroller, &line);
                     }
-                    WorkerMessage::ApplyFinished { result: Ok(has_updates), is_update, applied_actions } => {
+                    WorkerMessage::ApplyFinished {
+                        result: Ok(has_updates),
+                        is_update,
+                        applied_actions,
+                    } => {
                         log_panel_clone.set_visible(false);
                         toggle_logs_btn_clone.set_label("Show Logs");
                         let selected_actions = state.selected.borrow().clone();
@@ -457,14 +501,18 @@ fn build_ui(app: &adw::Application) {
                         window_clone.set_cursor(None);
                         status_row.set_title("Refreshing status");
                         status_row.set_subtitle("Re-analyzing system state after apply.");
-                        append_log(&log_view, &log_scroller, "Apply finished. Refreshing status...");
- 
+                        append_log(
+                            &log_view,
+                            &log_scroller,
+                            "Apply finished. Refreshing status...",
+                        );
+
                         let needs_restart = (is_update && has_updates)
                             || applied_actions.contains(&ActionId::NvidiaDriver)
                             || applied_actions.contains(&ActionId::AmdAcceleration)
                             || applied_actions.contains(&ActionId::IntelAcceleration)
                             || applied_actions.contains(&ActionId::ZshDefault);
- 
+
                         if needs_restart {
                             let dialog = adw::MessageDialog::builder()
                                 .transient_for(&window_clone)
@@ -478,10 +526,12 @@ fn build_ui(app: &adw::Application) {
                             });
                             dialog.present();
                         }
- 
+
                         spawn_analysis(analysis_sender.clone());
                     }
-                    WorkerMessage::ApplyFinished { result: Err(error), .. } => {
+                    WorkerMessage::ApplyFinished {
+                        result: Err(error), ..
+                    } => {
                         log_panel_clone.set_visible(true);
                         paned_clone.set_position(440);
                         toggle_logs_btn_clone.set_label("Hide Logs");
@@ -498,7 +548,7 @@ fn build_ui(app: &adw::Application) {
             glib::ControlFlow::Continue
         });
     }
- 
+
     {
         let sender = sender.clone();
         let progress = progress.clone();
@@ -519,11 +569,19 @@ fn build_ui(app: &adw::Application) {
             view_stack_clone.set_sensitive(false);
             let wait_cursor = gtk::gdk::Cursor::from_name("wait", None);
             window_clone.set_cursor(wait_cursor.as_ref());
- 
+
             progress.pulse();
             progress.set_text(Some("Waiting for authorization"));
-            append_log(&log_view, &log_scroller, "Starting system update before analysis...");
-            append_log(&log_view, &log_scroller, "Requesting PolicyKit authorization...");
+            append_log(
+                &log_view,
+                &log_scroller,
+                "Starting system update before analysis...",
+            );
+            append_log(
+                &log_view,
+                &log_scroller,
+                "Requesting PolicyKit authorization...",
+            );
             let sender = sender.clone();
             std::thread::spawn(move || {
                 let request = ApplyRequest {
@@ -546,8 +604,12 @@ fn build_ui(app: &adw::Application) {
                         });
                     }
                     Err(error) => {
-                        let _ = sender.send(WorkerMessage::HelperLine(format!("System update failed or skipped: {error}")));
-                        let _ = sender.send(WorkerMessage::HelperLine("Proceeding with system analysis...".into()));
+                        let _ = sender.send(WorkerMessage::HelperLine(format!(
+                            "System update failed or skipped: {error}"
+                        )));
+                        let _ = sender.send(WorkerMessage::HelperLine(
+                            "Proceeding with system analysis...".into(),
+                        ));
                         let system = detect_system();
                         let plan_result = build_plan(&system)
                             .map(|plan| (system, plan))
@@ -558,7 +620,7 @@ fn build_ui(app: &adw::Application) {
             });
         });
     }
- 
+
     {
         let state = state.clone();
         let sender = sender.clone();
@@ -591,10 +653,14 @@ fn build_ui(app: &adw::Application) {
             view_stack_clone.set_sensitive(false);
             let wait_cursor = gtk::gdk::Cursor::from_name("wait", None);
             window_clone.set_cursor(wait_cursor.as_ref());
- 
+
             progress.pulse();
             progress.set_text(Some("Waiting for authorization"));
-            append_log(&log_view, &log_scroller, "Requesting PolicyKit authorization...");
+            append_log(
+                &log_view,
+                &log_scroller,
+                "Requesting PolicyKit authorization...",
+            );
             let sender = sender.clone();
             std::thread::spawn(move || {
                 let request = ApplyRequest {
@@ -620,9 +686,11 @@ fn build_ui(app: &adw::Application) {
     window.present();
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_actions(
     setup_group: &adw::PreferencesGroup,
     extra_group: &adw::PreferencesGroup,
+    kde_group: &adw::PreferencesGroup,
     fonts_group: &adw::PreferencesGroup,
     browsers_group: &adw::PreferencesGroup,
     dev_group: &adw::PreferencesGroup,
@@ -649,7 +717,7 @@ fn render_actions(
         let completed = action.already_complete || completed_actions.contains(&action.id);
         let row = adw::ActionRow::builder()
             .title(&action.title)
-            .subtitle(&action_subtitle(action, completed))
+            .subtitle(action_subtitle(action, completed))
             .activatable(true)
             .build();
         row.set_subtitle_lines(4);
@@ -660,8 +728,8 @@ fn render_actions(
             status_label.set_halign(Align::End);
             row.add_suffix(&status_label);
 
-            let can_uninstall = action.category != ActionCategory::FedoraSetup
-                && action.id != ActionId::ZshDefault;
+            let can_uninstall =
+                action.category != ActionCategory::FedoraSetup && action.id != ActionId::ZshDefault;
             if can_uninstall {
                 let uninstall_button = gtk::Button::builder()
                     .label("Uninstall")
@@ -690,8 +758,8 @@ fn render_actions(
                 uninstall_button.connect_clicked(move |_btn| {
                     let confirm = adw::MessageDialog::builder()
                         .transient_for(&win)
-                        .heading(&format!("Uninstall {}?", action_title))
-                        .body(&format!("Are you sure you want to uninstall {}? This action will execute the uninstallation plan.", action_title))
+                        .heading(format!("Uninstall {}?", action_title))
+                        .body(format!("Are you sure you want to uninstall {}? This action will execute the uninstallation plan.", action_title))
                         .build();
                     confirm.add_response("cancel", "Cancel");
                     confirm.add_response("uninstall", "Uninstall");
@@ -787,6 +855,7 @@ fn render_actions(
             ActionCategory::OfficeProductivity => office_group.add(&row),
             ActionCategory::MediaCreative => creative_group.add(&row),
             ActionCategory::UtilitiesTools => utilities_group.add(&row),
+            ActionCategory::Kde => kde_group.add(&row),
         }
         rendered_rows.borrow_mut().push(ActionWidgets {
             row,
@@ -818,7 +887,8 @@ fn action_status_label(action: &Action) -> &'static str {
         | ActionCategory::DevDatabase
         | ActionCategory::OfficeProductivity
         | ActionCategory::MediaCreative
-        | ActionCategory::UtilitiesTools => "Installed",
+        | ActionCategory::UtilitiesTools
+        | ActionCategory::Kde => "Installed",
     }
 }
 
@@ -893,7 +963,11 @@ fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Res
     for line in reader.lines() {
         let line = line.map_err(|error| format!("failed to read helper output: {error}"))?;
         let lower = line.to_ascii_lowercase();
-        if lower.contains("upgrading") || lower.contains("installing") || lower.contains("upgraded:") || lower.contains("installed:") {
+        if lower.contains("upgrading")
+            || lower.contains("installing")
+            || lower.contains("upgraded:")
+            || lower.contains("installed:")
+        {
             has_updates = true;
         }
         let _ = sender.send(WorkerMessage::HelperLine(line));
@@ -906,6 +980,10 @@ fn run_helper(request: ApplyRequest, sender: mpsc::Sender<WorkerMessage>) -> Res
         Ok(has_updates)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("helper exited with {}; {}", output.status, stderr.trim()))
+        Err(format!(
+            "helper exited with {}; {}",
+            output.status,
+            stderr.trim()
+        ))
     }
 }
