@@ -845,6 +845,17 @@ pub fn commands_for_action(
     Ok(commands)
 }
 
+fn flatpak_uninstall_commands(app_id: &str, info: &SystemInfo) -> Vec<CommandSpec> {
+    let mut commands = Vec::new();
+    commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", app_id]));
+    commands.extend(user_shell_commands(
+        info,
+        &format!("Uninstall user-level Flatpak {}", app_id),
+        &format!("flatpak uninstall -y {}", app_id),
+    ));
+    commands
+}
+
 pub fn uninstall_commands_for_action(
     id: ActionId,
     _version: u16,
@@ -852,24 +863,24 @@ pub fn uninstall_commands_for_action(
 ) -> Result<Vec<CommandSpec>, PlannerError> {
     let mut commands = Vec::new();
     match id {
-        ActionId::FlatpakChrome => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.google.Chrome"])),
-        ActionId::FlatpakFirefox => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.mozilla.firefox"])),
-        ActionId::FlatpakBrave => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.brave.Browser"])),
-        ActionId::FlatpakZed => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "dev.zed.Zed"])),
-        ActionId::FlatpakPodmanDesktop => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "io.podman_desktop.PodmanDesktop"])),
-        ActionId::FlatpakDbeaver => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "io.dbeaver.DBeaverCommunity"])),
-        ActionId::FlatpakPostman => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.getpostman.Postman"])),
-        ActionId::FlatpakOnlyOffice => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.onlyoffice.desktopeditors"])),
-        ActionId::FlatpakObsidian => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "md.obsidian.Obsidian"])),
-        ActionId::FlatpakBitwarden => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.bitwarden.desktop"])),
-        ActionId::FlatpakVlc => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.videolan.VLC"])),
-        ActionId::FlatpakObsStudio => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.obsproject.Studio"])),
-        ActionId::FlatpakGimp => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.gimp.GIMP"])),
-        ActionId::FlatpakKdenlive => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.kde.kdenlive"])),
-        ActionId::FlatpakLocalSend => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.localsend.localsend_app"])),
-        ActionId::FlatpakFlameshot => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "org.flameshot.Flameshot"])),
-        ActionId::FlatpakFlatseal => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.github.tchx84.Flatseal"])),
-        ActionId::FlatpakBottles => commands.push(CommandSpec::new("flatpak", ["uninstall", "-y", "com.usebottles.bottles"])),
+        ActionId::FlatpakChrome => commands.extend(flatpak_uninstall_commands("com.google.Chrome", info)),
+        ActionId::FlatpakFirefox => commands.extend(flatpak_uninstall_commands("org.mozilla.firefox", info)),
+        ActionId::FlatpakBrave => commands.extend(flatpak_uninstall_commands("com.brave.Browser", info)),
+        ActionId::FlatpakZed => commands.extend(flatpak_uninstall_commands("dev.zed.Zed", info)),
+        ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_uninstall_commands("io.podman_desktop.PodmanDesktop", info)),
+        ActionId::FlatpakDbeaver => commands.extend(flatpak_uninstall_commands("io.dbeaver.DBeaverCommunity", info)),
+        ActionId::FlatpakPostman => commands.extend(flatpak_uninstall_commands("com.getpostman.Postman", info)),
+        ActionId::FlatpakOnlyOffice => commands.extend(flatpak_uninstall_commands("org.onlyoffice.desktopeditors", info)),
+        ActionId::FlatpakObsidian => commands.extend(flatpak_uninstall_commands("md.obsidian.Obsidian", info)),
+        ActionId::FlatpakBitwarden => commands.extend(flatpak_uninstall_commands("com.bitwarden.desktop", info)),
+        ActionId::FlatpakVlc => commands.extend(flatpak_uninstall_commands("org.videolan.VLC", info)),
+        ActionId::FlatpakObsStudio => commands.extend(flatpak_uninstall_commands("com.obsproject.Studio", info)),
+        ActionId::FlatpakGimp => commands.extend(flatpak_uninstall_commands("org.gimp.GIMP", info)),
+        ActionId::FlatpakKdenlive => commands.extend(flatpak_uninstall_commands("org.kde.kdenlive", info)),
+        ActionId::FlatpakLocalSend => commands.extend(flatpak_uninstall_commands("org.localsend.localsend_app", info)),
+        ActionId::FlatpakFlameshot => commands.extend(flatpak_uninstall_commands("org.flameshot.Flameshot", info)),
+        ActionId::FlatpakFlatseal => commands.extend(flatpak_uninstall_commands("com.github.tchx84.Flatseal", info)),
+        ActionId::FlatpakBottles => commands.extend(flatpak_uninstall_commands("com.usebottles.bottles", info)),
         ActionId::Ghostty => commands.push(CommandSpec::new("dnf", ["remove", "-y", "ghostty"])),
         ActionId::Vlc => commands.push(CommandSpec::new("dnf", ["remove", "-y", "vlc"])),
         ActionId::Kvantum => commands.push(CommandSpec::new("dnf", ["remove", "-y", "kvantum", "kvantum-qt5", "papirus-icon-theme"])),
@@ -878,7 +889,7 @@ pub fn uninstall_commands_for_action(
             commands.extend(user_shell_commands(
                 info,
                 "Uninstall Zed",
-                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed"; if [ -f "$HOME/.zshrc" ]; then sed -i '/local\/bin/d' "$HOME/.zshrc"; sed -i '/zed.app\/bin/d' "$HOME/.zshrc"; fi"#,
+                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed" "$HOME/.local/share/applications/dev.zed.Zed.desktop" "$HOME/.local/share/zed"; sed -i '/zed.app\/bin/d' "$HOME/.bashrc" "$HOME/.zshrc" 2>/dev/null || true"#,
             ));
         }
         ActionId::Starship => {
@@ -1004,7 +1015,7 @@ fn user_shell_commands(_info: &SystemInfo, label: &str, script: &str) -> Vec<Com
         .unwrap_or_else(|| format!("/home/{user}"));
     vec![CommandSpec::new(
         "runuser",
-        ["-u", user.as_str(), "--", "sh", "-lc", &format!("export HOME='{}'; {}", home.replace('\'', "'\\''"), script)],
+        ["-u", user.as_str(), "--", "sh", "-c", &format!("export HOME='{}'; {}", home.replace('\'', "'\\''"), script)],
     )]
 }
 
