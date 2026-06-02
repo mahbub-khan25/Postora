@@ -721,7 +721,7 @@ pub fn commands_for_action(
             commands.extend(user_shell_commands(
                 info,
                 "Install Zed",
-                "curl -f https://zed.dev/install.sh | sh",
+                r#"curl -f https://zed.dev/install.sh | sh; touch "$HOME/.bashrc"; if ! grep -q "local/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if ! grep -q "zed.app/bin" "$HOME/.bashrc" 2>/dev/null; then echo 'case ":$PATH:" in *":$HOME/.local/zed.app/bin:"*) ;; *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;; esac' >> "$HOME/.bashrc"; fi; if [ -f "$HOME/.zshrc" ] && ! grep -q "bashrc" "$HOME/.zshrc" 2>/dev/null; then printf '\n# Source user .bashrc if it exists for shared environment variables/aliases\nif [ -f "$HOME/.bashrc" ]; then\n    . "$HOME/.bashrc"\nfi\n' >> "$HOME/.zshrc"; fi"#,
             ));
         }
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
