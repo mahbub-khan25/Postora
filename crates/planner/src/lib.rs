@@ -146,6 +146,7 @@ pub enum ActionId {
     FlatpakChrome,
     FlatpakFirefox,
     FlatpakBrave,
+    BraveOriginBeta,
     FlatpakPodmanDesktop,
     FlatpakDbeaver,
     FlatpakPostman,
@@ -428,6 +429,16 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         selected_by_default: false,
         already_complete: info.flatpak_apps.contains("com.brave.Browser"),
         warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::BraveOriginBeta,
+        category: ActionCategory::WebBrowsers,
+        title: "Brave Origin Beta".into(),
+        description: "Enable the Brave beta RPM repository and install Brave Origin Beta.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("brave-origin-beta"),
+        warning: Some("This enables Brave's beta RPM repository.".into()),
     });
 
     // Development & Database
@@ -852,6 +863,24 @@ pub fn commands_for_action(
         ActionId::FlatpakBrave => {
             commands.extend(flatpak_install_commands("com.brave.Browser", info))
         }
+        ActionId::BraveOriginBeta if !info.installed_packages.contains("brave-origin-beta") => {
+            commands.push(CommandSpec::new(
+                "dnf",
+                ["install", "-y", "dnf-plugins-core"],
+            ));
+            commands.push(CommandSpec::new(
+                "dnf",
+                [
+                    "config-manager",
+                    "addrepo",
+                    "--from-repofile=https://brave-browser-rpm-beta.s3.brave.com/brave-browser-beta.repo",
+                ],
+            ));
+            commands.push(CommandSpec::new(
+                "dnf",
+                ["install", "-y", "brave-origin-beta"],
+            ));
+        }
         ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_install_commands(
             "io.podman_desktop.PodmanDesktop",
             info,
@@ -950,6 +979,9 @@ pub fn uninstall_commands_for_action(
         }
         ActionId::FlatpakBrave => {
             commands.extend(flatpak_uninstall_commands("com.brave.Browser", info))
+        }
+        ActionId::BraveOriginBeta => {
+            commands.push(CommandSpec::new("dnf", ["remove", "-y", "brave-origin-beta"]));
         }
         ActionId::FlatpakPodmanDesktop => commands.extend(flatpak_uninstall_commands(
             "io.podman_desktop.PodmanDesktop",

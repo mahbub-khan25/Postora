@@ -1,7 +1,7 @@
 # Developed by mahbub khan <mahbub.aumi@gmail.com>
 
 Name:           postora
-Version:        0.0.5
+Version:        0.1.6
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -58,6 +58,9 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
+* Thu Jun 04 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.6-1
+- Add Brave Origin Beta RPM repository and package action
+
 * Tue Jun 02 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.5-1
 - Move optional tools into a separate Tools & Extras tab and add a KDE category
 - Move Development Tools out of Applications and into Tools & Extras

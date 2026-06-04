@@ -576,7 +576,7 @@ checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
 
 [[package]]
 name = "postora"
-version = "0.0.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "gtk4",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "postora-helper"
-version = "0.0.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "postora-planner",
@@ -599,7 +599,7 @@ dependencies = [
 
 [[package]]
 name = "postora-planner"
-version = "0.0.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "serde",

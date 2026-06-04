@@ -110,6 +110,37 @@ fn unavailable_gpu_action_is_rejected() {
 }
 
 #[test]
+fn brave_origin_beta_uses_brave_rpm_repository() {
+    let info = base_info(42);
+    let commands = commands_for_request(
+        &ApplyRequest {
+            plan_id: Uuid::new_v4(),
+            selected_actions: BTreeSet::from([ActionId::BraveOriginBeta]),
+            uninstall_actions: BTreeSet::new(),
+            detected_fedora_version: 42,
+            detected_gpu_vendors: BTreeSet::new(),
+            target_user: Some("testuser".into()),
+            target_home: Some("/home/testuser".into()),
+            run_update: false,
+        },
+        &info,
+    )
+    .unwrap();
+    let rendered = commands
+        .iter()
+        .map(|(_, command)| command.display())
+        .collect::<Vec<_>>();
+
+    assert_eq!(rendered.len(), 3);
+    assert_eq!(rendered[0], "dnf install -y dnf-plugins-core");
+    assert_eq!(
+        rendered[1],
+        "dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-beta.s3.brave.com/brave-browser-beta.repo"
+    );
+    assert_eq!(rendered[2], "dnf install -y brave-origin-beta");
+}
+
+#[test]
 fn helper_planning_refuses_non_fedora_systems() {
     let mut info = base_info(42);
     info.os_id = "ubuntu".into();
