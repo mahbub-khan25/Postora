@@ -1,3 +1,5 @@
+# Developed by mahbub khan <mahbub.aumi@gmail.com>
+
 [package]
 name = "postora-helper"
 version.workspace = true

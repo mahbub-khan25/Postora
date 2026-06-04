@@ -1,3 +1,5 @@
+# Developed by mahbub khan <mahbub.aumi@gmail.com>
+
 [workspace]
 members = [
     "crates/app",
@@ -10,7 +12,7 @@ resolver = "2"
 version = "0.0.5"
 edition = "2021"
 license = "MIT"
-authors = ["Postora contributors"]
+authors = ["mahbub khan <mahbub.aumi@gmail.com>"]
 
 [workspace.dependencies]
 anyhow = "1"

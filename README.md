@@ -1,3 +1,5 @@
+<!-- Developed by mahbub khan <mahbub.aumi@gmail.com> -->
+
 # Postora
 
 Postora is a native Rust GTK4/libadwaita desktop app for regular Fedora systems that use `dnf`.
@@ -11,9 +13,9 @@ Supported v1 tasks:
 - NVIDIA driver packages when NVIDIA hardware is detected
 - AMD and Intel media acceleration packages when matching hardware is detected
 - Flathub remote setup
-- Optional apps: Ghostty, Zed, VLC
+- Optional apps: Ghostty, VLC
 - Optional shell setup: zsh as default shell and Starship with the Catppuccin Powerline preset
-- Optional Nerd Fonts: FiraCode, ZedMono, JetBrainsMono, Hack, Meslo, CaskaydiaCove, SourceCodePro, UbuntuMono, RobotoMono, and Iosevka
+- Optional Nerd Fonts: FiraCode, JetBrainsMono, Hack, Meslo, CaskaydiaCove, SourceCodePro, UbuntuMono, RobotoMono, and Iosevka
 
 Atomic Fedora variants such as Silverblue and Kinoite are detected and blocked because they require an rpm-ostree-specific workflow.
 

@@ -1,3 +1,5 @@
+# Developed by mahbub khan <mahbub.aumi@gmail.com>
+
 Name:           postora
 Version:        0.0.5
 Release:        1%{?dist}
@@ -56,50 +58,48 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
-* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.5-1
+* Tue Jun 02 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.5-1
 - Move optional tools into a separate Tools & Extras tab and add a KDE category
-- Remove Flatpak Zed in favor of the official zed.dev installer with shared Bash/Zsh PATH setup
 - Move Development Tools out of Applications and into Tools & Extras
 
-* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.4-1
-- Implement app uninstallation directly from the GUI (dnf, flatpak, zed, starship, nerd-fonts)
+* Tue Jun 02 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.4-1
+- Implement app uninstallation directly from the GUI (dnf, flatpak, starship, nerd-fonts)
 - Implement BASH_VERSION shell path sync guards in .bashrc to prevent shopt errors under Zsh
-- Make .zshrc and .bashrc zed/starship configs fully independent without cross-shell sourcing
+- Make .zshrc and .bashrc starship configs fully independent without cross-shell sourcing
 
-* Tue Jun 02 2026 Postora contributors <noreply@example.invalid> - 0.0.3-1
+* Tue Jun 02 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.3-1
 - Add Kvantum Manager and Development Tools installation actions to the GUI
-- Integrate automatic shell path configuration and sourcing into Zed action
 
 - Correct DNF group upgrade command syntax (--setopt instead of --setop typo)
 - Update multimedia codecs completeness checks to require both ffmpeg and gstreamer1-plugins-ugly
 - Refactor planner to allow retrying of failed group upgrades
 
-* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.2.1-1
+* Mon Jun 01 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.2.1-1
 - Implement collapsible resizable log panel with Show/Hide toggle button, auto-collapse on success, and auto-expand on start/error
 
-* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.2.0-1
+* Mon Jun 01 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.2.0-1
 - Implement resizable Paned logs partition, horizontal demarcation line, full-UI sensitivity locking, and busy mouse cursor indicator
 
-* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.1.9-1
+* Mon Jun 01 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.9-1
 - Collapse logs by default, expand on apply/progress, and only show restart warning if updates or drivers were installed
 
-* Mon Jun 01 2026 Postora contributors <noreply@example.invalid> - 0.1.8-1
+* Mon Jun 01 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.8-1
 - Fix Starship command syntax error and add restart/logout prompt
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.5-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.5-1
 - Ensure Flathub remote is always enabled and not left disabled
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.4-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.4-1
 - Include 19 Flatpak apps in different categories: Web Browsers, Development, Office, Media, Utilities
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.3-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.3-1
 - Refresh installed state after apply and improve completion detection
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.2-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.2-1
 - Add optional extra app, shell, prompt, and Nerd Font installs
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.1-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.1-1
 - Improve scrolling and log layout
 
-* Sun May 31 2026 Postora contributors <noreply@example.invalid> - 0.1.0-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.0-1
 - Initial package

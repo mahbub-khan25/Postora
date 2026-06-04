@@ -1,3 +1,5 @@
+// Developed by mahbub khan <mahbub.aumi@gmail.com>
+
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashSet};
 use std::ffi::OsStr;
@@ -127,12 +129,10 @@ pub enum ActionId {
     IntelAcceleration,
     Flathub,
     Ghostty,
-    Zed,
     Vlc,
     ZshDefault,
     Starship,
     FontFiraCode,
-    FontZedMono,
     FontJetBrainsMono,
     FontHack,
     FontMeslo,
@@ -364,17 +364,6 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         selected_by_default: false,
         already_complete: info.installed_packages.contains("ghostty"),
         warning: Some("This enables a third-party COPR repository.".into()),
-    });
-    actions.push(Action {
-        id: ActionId::Zed,
-        category: ActionCategory::ExtraApps,
-        title: "Zed editor".into(),
-        description: "Install Zed for the current user using the official zed.dev install script."
-            .into(),
-        recommended: false,
-        selected_by_default: false,
-        already_complete: zed_installed(&current_home_dir()),
-        warning: Some("This runs the official installer from zed.dev as your user.".into()),
     });
     actions.push(Action {
         id: ActionId::Vlc,
@@ -794,23 +783,6 @@ pub fn commands_for_action(
             ));
             commands.push(CommandSpec::new("dnf", ["install", "-y", "ghostty"]));
         }
-        ActionId::Zed if !zed_installed(&current_home_dir()) => {
-            commands.extend(user_shell_commands(
-                info,
-                "Install Zed",
-                r#"curl -f https://zed.dev/install.sh | sh; cat > "$HOME/.postora-paths.sh" <<'EOF'
-case ":$PATH:" in
-    *":$HOME/.local/bin:"*) ;;
-    *) export PATH="$HOME/.local/bin:$PATH" ;;
-esac
-case ":$PATH:" in
-    *":$HOME/.local/zed.app/bin:"*) ;;
-    *) export PATH="$HOME/.local/zed.app/bin:$PATH" ;;
-esac
-EOF
-touch "$HOME/.bashrc"; grep -q ".postora-paths.sh" "$HOME/.bashrc" 2>/dev/null || printf '\n# Postora shared PATH setup\nif [ -f "$HOME/.postora-paths.sh" ]; then\n    . "$HOME/.postora-paths.sh"\nfi\n' >> "$HOME/.bashrc"; if command -v zsh >/dev/null 2>&1 || [ -f "$HOME/.zshrc" ]; then touch "$HOME/.zshrc"; grep -q ".postora-paths.sh" "$HOME/.zshrc" 2>/dev/null || printf '\n# Postora shared PATH setup\nif [ -f "$HOME/.postora-paths.sh" ]; then\n    . "$HOME/.postora-paths.sh"\nfi\n' >> "$HOME/.zshrc"; fi"#,
-            ));
-        }
         ActionId::Vlc if !info.installed_packages.contains("vlc") => {
             commands.push(CommandSpec::new("dnf", ["install", "-y", "vlc"]));
         }
@@ -1042,13 +1014,6 @@ pub fn uninstall_commands_for_action(
                 "remove", "-y", "git", "gcc", "gcc-c++", "make", "cmake", "curl", "wget", "unzip",
             ],
         )),
-        ActionId::Zed => {
-            commands.extend(user_shell_commands(
-                info,
-                "Uninstall Zed",
-                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed" "$HOME/.local/share/applications/dev.zed.Zed.desktop" "$HOME/.local/share/zed"; rm -f "$HOME/.postora-paths.sh"; sed -i '/.postora-paths.sh/d' "$HOME/.bashrc" "$HOME/.zshrc" 2>/dev/null || true"#,
-            ));
-        }
         ActionId::Starship => {
             commands.push(CommandSpec::new("rm", ["-f", "/usr/local/bin/starship"]));
             commands.extend(user_shell_commands(
@@ -1086,12 +1051,6 @@ pub fn nerd_fonts() -> &'static [NerdFont] {
             title: "FiraCode",
             asset_slug: "FiraCode",
             url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/FiraCode.zip",
-        },
-        NerdFont {
-            id: ActionId::FontZedMono,
-            title: "ZedMono",
-            asset_slug: "ZedMono",
-            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/ZedMono.zip",
         },
         NerdFont {
             id: ActionId::FontJetBrainsMono,
@@ -1168,17 +1127,6 @@ fn current_user_name() -> Option<String> {
                 .ok()
                 .filter(|user| !user.is_empty())
         })
-}
-
-fn zed_installed(home: &Path) -> bool {
-    [
-        home.join(".local/bin/zed"),
-        home.join(".local/zed.app/bin/zed"),
-        home.join(".local/share/applications/dev.zed.Zed.desktop"),
-        home.join(".local/share/zed"),
-    ]
-    .iter()
-    .any(|path| path.exists())
 }
 
 fn starship_configured(home: &Path) -> bool {
@@ -1672,15 +1620,6 @@ mod tests {
             assert_eq!(commands.len(), 1);
             assert_eq!(commands[0], openh264_command(version));
         }
-    }
-
-    #[test]
-    fn zed_detection_uses_install_directory() {
-        let home = unique_temp_home();
-        fs::create_dir_all(home.join(".local/bin")).unwrap();
-        fs::write(home.join(".local/bin/zed"), "binary").unwrap();
-        assert!(zed_installed(&home));
-        assert!(!zed_installed(&home.join("missing")));
     }
 
     #[test]

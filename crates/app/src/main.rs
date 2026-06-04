@@ -1,3 +1,5 @@
+// Developed by mahbub khan <mahbub.aumi@gmail.com>
+
 use adw::prelude::*;
 use gtk::glib;
 use gtk::{Align, Orientation, PolicyType, WrapMode};
