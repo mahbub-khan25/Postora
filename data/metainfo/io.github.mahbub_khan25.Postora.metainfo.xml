@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Developed by mahbub khan <mahbub.aumi@gmail.com> -->
+<component type="desktop-application">
+  <id>io.github.mahbub_khan25.Postora</id>
+  <name>Postora</name>
+  <summary>Enable common Fedora repositories, codecs, GPU acceleration, and Flathub</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Postora analyzes a regular Fedora Workstation-style system and offers optional post-install tasks such as RPM Fusion, Cisco OpenH264, multimedia codecs, GPU acceleration packages, and Flathub.</p>
+  </description>
+  <launchable type="desktop-id">io.github.mahbub_khan25.Postora.desktop</launchable>
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+  </categories>
+  <releases>
+    <release version="0.1.5" date="2026-05-31"/>
+    <release version="0.1.4" date="2026-05-31"/>
+    <release version="0.1.3" date="2026-05-31"/>
+    <release version="0.1.2" date="2026-05-31"/>
+    <release version="0.1.1" date="2026-05-31"/>
+    <release version="0.1.0" date="2026-05-31"/>
+  </releases>
+</component>

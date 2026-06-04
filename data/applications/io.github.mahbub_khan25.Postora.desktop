@@ -1,0 +1,11 @@
+# Developed by mahbub khan <mahbub.aumi@gmail.com>
+
+[Desktop Entry]
+Type=Application
+Name=Postora
+Comment=Enable common Fedora repositories, codecs, GPU acceleration, and Flathub
+Exec=postora
+Icon=io.github.mahbub_khan25.Postora
+Terminal=false
+Categories=Settings;PackageManager;
+StartupNotify=true
