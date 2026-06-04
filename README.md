@@ -2,63 +2,42 @@
 
 # Postora
 
-Postora is a native Rust GTK4/libadwaita desktop app for regular Fedora systems that use `dnf`.
-It analyzes the host without elevation, then applies selected changes through a PolicyKit-authorized helper.
+Postora is a native Fedora desktop utility for common post-install setup tasks.
+It checks the system first, then lets you apply selected repository, codec,
+driver, Flatpak, shell, font, and application changes through PolicyKit.
 
-Supported v1 tasks:
+![Postora system setup screen](Screenshots/1.png)
 
-- RPM Fusion free and nonfree release RPMs
-- Fedora Cisco OpenH264 repository and OpenH264 packages
-- RPM Fusion multimedia codecs
-- NVIDIA driver packages when NVIDIA hardware is detected
-- AMD and Intel media acceleration packages when matching hardware is detected
-- Flathub remote setup
-- Optional apps: Ghostty, VLC
-- Optional shell setup: zsh as default shell and Starship with the Catppuccin Powerline preset
-- Optional Nerd Fonts: FiraCode, JetBrainsMono, Hack, Meslo, CaskaydiaCove, SourceCodePro, UbuntuMono, RobotoMono, and Iosevka
+## Download
 
-Atomic Fedora variants such as Silverblue and Kinoite are detected and blocked because they require an rpm-ostree-specific workflow.
+The latest release package is included in this repository:
 
-## Install
+[postora-0.0.5-1.fc44.x86_64.rpm](postora-0.0.5-1.fc44.x86_64.rpm)
 
-Normal users do not need Rust, Cargo, or development packages to run Postora.
-Download the RPM from the GitHub release page, open it with GNOME Software or KDE Discover, and install it from there.
-
-The RPM installs the app, desktop launcher, PolicyKit helper, icon, and metadata.
-Runtime dependencies are handled by the package manager during installation.
-
-## Build
-
-These steps are only for developers who want to build Postora from source.
-On Fedora, install build dependencies:
+Install it on Fedora with:
 
 ```sh
-sudo dnf install cargo rust gtk4-devel libadwaita-devel desktop-file-utils libappstream-glib
+sudo dnf install ./postora-0.0.5-1.fc44.x86_64.rpm
 ```
 
-Then run:
+## Screenshots
 
-```sh
-cargo fmt --check
-cargo test --workspace
-cargo clippy --workspace --all-targets -- -D warnings
-cargo build --release
-```
+![Postora authorization and logs](Screenshots/2.png)
 
-## RPM
+![Postora result dialog](Screenshots/3.png)
 
-Create a source tarball named `postora-0.0.5.tar.gz`, then build the package with:
+![Postora tools and extras](Screenshots/4.png)
 
-```sh
-tar --exclude=target -czf ~/rpmbuild/SOURCES/postora-0.0.5.tar.gz --transform 's,^,postora-0.0.5/,' .
-rpmbuild -ba packaging/rpm/postora.spec
-```
+![Postora applications](Screenshots/5.png)
 
-The installed files include:
+![Postora nerd fonts](Screenshots/6.png)
 
-- `/usr/bin/postora`
-- `/usr/libexec/postora-helper`
-- `/usr/share/applications/io.github.mahbub_khan25.Postora.desktop`
-- `/usr/share/polkit-1/actions/io.github.mahbub_khan25.Postora.policy`
+![Postora completed actions](Screenshots/7.png)
 
-For local development, set `POSTORA_HELPER` to a helper path before launching the GUI.
+## Details
+
+- Fedora-focused GTK4/libadwaita desktop app.
+- System analysis runs before privileged changes.
+- PolicyKit is used for installation tasks.
+- Includes the latest RPM release file for direct installation.
+
