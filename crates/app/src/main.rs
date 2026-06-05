@@ -109,6 +109,10 @@ fn build_ui(app: &adw::Application) {
         .title("KDE")
         .description("Install KDE-focused appearance and desktop tools.")
         .build();
+    let gnome_group = adw::PreferencesGroup::builder()
+        .title("GNOME")
+        .description("Install GNOME-focused appearance and extension tools.")
+        .build();
     let fonts_group = adw::PreferencesGroup::builder()
         .title("Nerd Fonts")
         .description("Select one or more developer fonts to install system-wide.")
@@ -175,6 +179,7 @@ fn build_ui(app: &adw::Application) {
     extra_page.set_margin_end(18);
     extra_page.append(&extra_group);
     extra_page.append(&kde_group);
+    extra_page.append(&gnome_group);
 
     let extra_scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never)
@@ -246,7 +251,7 @@ fn build_ui(app: &adw::Application) {
                 .transient_for(&window_clone)
                 .application_name("Postora")
                 .application_icon("io.github.mahbub_khan25.Postora")
-                .version("0.1.6")
+                .version("0.0.8")
                 .developer_name("Mahbub Afzal Khan")
                 .support_url("mailto:mahbub.aumi@gmail.com")
                 .website("https://github.com/mahbub-khan25/Postora")
@@ -350,6 +355,7 @@ fn build_ui(app: &adw::Application) {
         let action_group = action_group.clone();
         let extra_group = extra_group.clone();
         let kde_group = kde_group.clone();
+        let gnome_group = gnome_group.clone();
         let fonts_group = fonts_group.clone();
         let empty_row = empty_row.clone();
         let progress = progress.clone();
@@ -396,6 +402,7 @@ fn build_ui(app: &adw::Application) {
                                     utilities_group.remove(&widget.row)
                                 }
                                 ActionCategory::Kde => kde_group.remove(&widget.row),
+                                ActionCategory::Gnome => gnome_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_some() {
@@ -405,6 +412,7 @@ fn build_ui(app: &adw::Application) {
                             &action_group,
                             &extra_group,
                             &kde_group,
+                            &gnome_group,
                             &fonts_group,
                             &browsers_group,
                             &dev_group,
@@ -457,6 +465,7 @@ fn build_ui(app: &adw::Application) {
                                     utilities_group.remove(&widget.row)
                                 }
                                 ActionCategory::Kde => kde_group.remove(&widget.row),
+                                ActionCategory::Gnome => gnome_group.remove(&widget.row),
                             }
                         }
                         if empty_row.parent().is_none() {
@@ -693,6 +702,7 @@ fn render_actions(
     setup_group: &adw::PreferencesGroup,
     extra_group: &adw::PreferencesGroup,
     kde_group: &adw::PreferencesGroup,
+    gnome_group: &adw::PreferencesGroup,
     fonts_group: &adw::PreferencesGroup,
     browsers_group: &adw::PreferencesGroup,
     dev_group: &adw::PreferencesGroup,
@@ -858,6 +868,7 @@ fn render_actions(
             ActionCategory::MediaCreative => creative_group.add(&row),
             ActionCategory::UtilitiesTools => utilities_group.add(&row),
             ActionCategory::Kde => kde_group.add(&row),
+            ActionCategory::Gnome => gnome_group.add(&row),
         }
         rendered_rows.borrow_mut().push(ActionWidgets {
             row,
@@ -890,7 +901,8 @@ fn action_status_label(action: &Action) -> &'static str {
         | ActionCategory::OfficeProductivity
         | ActionCategory::MediaCreative
         | ActionCategory::UtilitiesTools
-        | ActionCategory::Kde => "Installed",
+        | ActionCategory::Kde
+        | ActionCategory::Gnome => "Installed",
     }
 }
 

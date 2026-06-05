@@ -141,6 +141,67 @@ fn brave_origin_beta_uses_brave_rpm_repository() {
 }
 
 #[test]
+fn zed_installer_configures_bash_and_zsh_path() {
+    let info = base_info(42);
+    let commands = commands_for_request(
+        &ApplyRequest {
+            plan_id: Uuid::new_v4(),
+            selected_actions: BTreeSet::from([ActionId::Zed]),
+            uninstall_actions: BTreeSet::new(),
+            detected_fedora_version: 42,
+            detected_gpu_vendors: BTreeSet::new(),
+            target_user: Some("testuser".into()),
+            target_home: Some("/home/testuser".into()),
+            run_update: false,
+        },
+        &info,
+    )
+    .unwrap();
+    let rendered = commands
+        .iter()
+        .map(|(_, command)| command.display())
+        .collect::<Vec<_>>();
+
+    assert_eq!(rendered.len(), 1);
+    assert!(rendered[0].contains("curl -f https://zed.dev/install.sh | sh"));
+    assert!(rendered[0].contains(".bashrc"));
+    assert!(rendered[0].contains(".zshrc"));
+    assert!(rendered[0].contains("$HOME/.local/bin"));
+}
+
+#[test]
+fn gnome_tools_use_fedora_package_and_flathub_app() {
+    let info = base_info(42);
+    let commands = commands_for_request(
+        &ApplyRequest {
+            plan_id: Uuid::new_v4(),
+            selected_actions: BTreeSet::from([
+                ActionId::GnomeTweaks,
+                ActionId::FlatpakExtensionManager,
+            ]),
+            uninstall_actions: BTreeSet::new(),
+            detected_fedora_version: 42,
+            detected_gpu_vendors: BTreeSet::new(),
+            target_user: Some("testuser".into()),
+            target_home: Some("/home/testuser".into()),
+            run_update: false,
+        },
+        &info,
+    )
+    .unwrap();
+    let rendered = commands
+        .iter()
+        .map(|(_, command)| command.display())
+        .collect::<Vec<_>>();
+
+    assert!(rendered
+        .iter()
+        .any(|cmd| cmd == "dnf install -y gnome-tweaks"));
+    assert!(rendered.iter().any(|cmd| cmd
+        == "flatpak install --system -y flathub com.mattjakeman.ExtensionManager"));
+}
+
+#[test]
 fn helper_planning_refuses_non_fedora_systems() {
     let mut info = base_info(42);
     info.os_id = "ubuntu".into();

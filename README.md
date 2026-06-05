@@ -12,12 +12,12 @@ driver, Flatpak, shell, font, and application changes through PolicyKit.
 
 The latest release package is included in this repository:
 
-[postora-0.1.6-1.fc44.x86_64.rpm](postora-0.1.6-1.fc44.x86_64.rpm)
+[postora-0.0.8-1.fc44.x86_64.rpm](postora-0.0.8-1.fc44.x86_64.rpm)
 
 Install it on Fedora with:
 
 ```sh
-sudo dnf install ./postora-0.1.6-1.fc44.x86_64.rpm
+sudo dnf install ./postora-0.0.8-1.fc44.x86_64.rpm
 ```
 
 ## Screenshots

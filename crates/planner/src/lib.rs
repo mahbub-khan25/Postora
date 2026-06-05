@@ -132,6 +132,7 @@ pub enum ActionId {
     Vlc,
     ZshDefault,
     Starship,
+    Zed,
     FontFiraCode,
     FontJetBrainsMono,
     FontHack,
@@ -161,6 +162,8 @@ pub enum ActionId {
     FlatpakFlameshot,
     FlatpakFlatseal,
     FlatpakBottles,
+    GnomeTweaks,
+    FlatpakExtensionManager,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -175,6 +178,7 @@ pub enum ActionCategory {
     MediaCreative,
     UtilitiesTools,
     Kde,
+    Gnome,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -398,6 +402,16 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         already_complete: starship_configured(&current_home_dir()),
         warning: Some("This runs the official installer from starship.rs.".into()),
     });
+    actions.push(Action {
+        id: ActionId::Zed,
+        category: ActionCategory::ExtraApps,
+        title: "Zed IDE".into(),
+        description: "Install Zed and add its command-line launcher to bash and zsh.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: zed_configured(&current_home_dir()),
+        warning: Some("This runs the official installer from zed.dev.".into()),
+    });
 
     // Web Browsers
     actions.push(Action {
@@ -601,6 +615,29 @@ pub fn build_plan(info: &SystemInfo) -> Result<Plan, PlannerError> {
         selected_by_default: false,
         already_complete: info.installed_packages.contains("kvantum")
             && info.installed_packages.contains("papirus-icon-theme"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::GnomeTweaks,
+        category: ActionCategory::Gnome,
+        title: "GNOME Tweaks".into(),
+        description: "Install GNOME Tweaks for advanced desktop appearance and behavior settings."
+            .into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info.installed_packages.contains("gnome-tweaks"),
+        warning: None,
+    });
+    actions.push(Action {
+        id: ActionId::FlatpakExtensionManager,
+        category: ActionCategory::Gnome,
+        title: "Extension Manager".into(),
+        description: "Install Matthew Jakeman's Extension Manager from Flathub.".into(),
+        recommended: false,
+        selected_by_default: false,
+        already_complete: info
+            .flatpak_apps
+            .contains("com.mattjakeman.ExtensionManager"),
         warning: None,
     });
 
@@ -854,6 +891,19 @@ pub fn commands_for_action(
                 r##"mkdir -p "$HOME/.config"; /usr/local/bin/starship preset catppuccin-powerline -o "$HOME/.config/starship.toml"; touch "$HOME/.bashrc" "$HOME/.zshrc"; grep -q "starship init bash" "$HOME/.bashrc" 2>/dev/null || printf '\n# Starship shell prompt (only if in bash)\nif [ -n "$BASH_VERSION" ]; then\n    eval "$(starship init bash)"\nfi\n' >> "$HOME/.bashrc"; grep -q "starship init zsh" "$HOME/.zshrc" 2>/dev/null || echo 'eval "$(starship init zsh)"' >> "$HOME/.zshrc""##,
             ));
         }
+        ActionId::Zed if !zed_configured(&current_home_dir()) => {
+            commands.extend(user_shell_commands(
+                info,
+                "Install Zed",
+                r#"curl -f https://zed.dev/install.sh | sh; mkdir -p "$HOME/.local/bin"; if [ -x "$HOME/.local/zed.app/bin/zed" ] && [ ! -e "$HOME/.local/bin/zed" ]; then ln -s "$HOME/.local/zed.app/bin/zed" "$HOME/.local/bin/zed"; fi; touch "$HOME/.bashrc" "$HOME/.zshrc"; zed_path_block='
+# Zed editor command
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+'; grep -q "Zed editor command" "$HOME/.bashrc" 2>/dev/null || printf "%s" "$zed_path_block" >> "$HOME/.bashrc"; grep -q "Zed editor command" "$HOME/.zshrc" 2>/dev/null || printf "%s" "$zed_path_block" >> "$HOME/.zshrc""#,
+            ));
+        }
         ActionId::FlatpakChrome => {
             commands.extend(flatpak_install_commands("com.google.Chrome", info))
         }
@@ -923,6 +973,13 @@ pub fn commands_for_action(
         ActionId::FlatpakBottles => {
             commands.extend(flatpak_install_commands("com.usebottles.bottles", info))
         }
+        ActionId::GnomeTweaks if !info.installed_packages.contains("gnome-tweaks") => {
+            commands.push(CommandSpec::new("dnf", ["install", "-y", "gnome-tweaks"]));
+        }
+        ActionId::FlatpakExtensionManager => commands.extend(flatpak_install_commands(
+            "com.mattjakeman.ExtensionManager",
+            info,
+        )),
         action if nerd_font(action).is_some() => {
             let font = nerd_font(action).expect("font action exists");
             let destination = format!("/usr/local/share/fonts/postora/{}", font.asset_slug);
@@ -1040,6 +1097,13 @@ pub fn uninstall_commands_for_action(
                 "papirus-icon-theme",
             ],
         )),
+        ActionId::GnomeTweaks => {
+            commands.push(CommandSpec::new("dnf", ["remove", "-y", "gnome-tweaks"]))
+        }
+        ActionId::FlatpakExtensionManager => commands.extend(flatpak_uninstall_commands(
+            "com.mattjakeman.ExtensionManager",
+            info,
+        )),
         ActionId::DevTools => commands.push(CommandSpec::new(
             "dnf",
             [
@@ -1052,6 +1116,13 @@ pub fn uninstall_commands_for_action(
                 info,
                 "Remove Starship config hooks",
                 r#"sed -i '/starship/d' "$HOME/.bashrc" "$HOME/.zshrc"; rm -f "$HOME/.config/starship.toml""#,
+            ));
+        }
+        ActionId::Zed => {
+            commands.extend(user_shell_commands(
+                info,
+                "Remove Zed",
+                r#"rm -rf "$HOME/.local/zed.app" "$HOME/.local/bin/zed"; sed -i '/# Zed editor command/,/esac/d' "$HOME/.bashrc" "$HOME/.zshrc" 2>/dev/null || true"#,
             ));
         }
         action if nerd_font(action).is_some() => {
@@ -1176,6 +1247,19 @@ fn starship_configured(home: &Path) -> bool {
         && config.exists()
         && configured_bash
         && configured_zsh
+}
+
+fn zed_configured(home: &Path) -> bool {
+    let launcher = home.join(".local/bin/zed");
+    let app_binary = home.join(".local/zed.app/bin/zed");
+    let bashrc = home.join(".bashrc");
+    let zshrc = home.join(".zshrc");
+
+    (launcher.exists() || app_binary.exists())
+        && file_contains(&bashrc, "Zed editor command")
+        && file_contains(&zshrc, "Zed editor command")
+        && file_contains(&bashrc, "$HOME/.local/bin")
+        && file_contains(&zshrc, "$HOME/.local/bin")
 }
 
 fn default_shell_is_zsh() -> bool {
@@ -1666,5 +1750,25 @@ mod tests {
         assert!(starship_configured(&home));
         fs::write(home.join(".zshrc"), "echo hello").unwrap();
         assert!(!starship_configured(&home));
+    }
+
+    #[test]
+    fn zed_detection_requires_launcher_and_shell_paths() {
+        let home = unique_temp_home();
+        fs::create_dir_all(home.join(".local/bin")).unwrap();
+        fs::write(home.join(".local/bin/zed"), "binary").unwrap();
+        fs::write(
+            home.join(".bashrc"),
+            "# Zed editor command\nexport PATH=\"$HOME/.local/bin:$PATH\"\n",
+        )
+        .unwrap();
+        fs::write(
+            home.join(".zshrc"),
+            "# Zed editor command\nexport PATH=\"$HOME/.local/bin:$PATH\"\n",
+        )
+        .unwrap();
+        assert!(zed_configured(&home));
+        fs::write(home.join(".zshrc"), "echo hello").unwrap();
+        assert!(!zed_configured(&home));
     }
 }

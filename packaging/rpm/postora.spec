@@ -1,7 +1,7 @@
 # Developed by mahbub khan <mahbub.aumi@gmail.com>
 
 Name:           postora
-Version:        0.1.6
+Version:        0.0.8
 Release:        1%{?dist}
 Summary:        GUI post-install setup assistant for Fedora
 
@@ -58,7 +58,11 @@ cargo test --workspace
 %{_metainfodir}/io.github.mahbub_khan25.Postora.metainfo.xml
 
 %changelog
-* Thu Jun 04 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.6-1
+* Fri Jun 05 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.8-1
+- Add Zed IDE install option with bash and zsh command path setup
+- Add GNOME Tweaks and Extension Manager options under a GNOME tools section
+
+* Thu Jun 04 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.7-1
 - Add Brave Origin Beta RPM repository and package action
 
 * Tue Jun 02 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.5-1
@@ -89,20 +93,20 @@ cargo test --workspace
 * Mon Jun 01 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.8-1
 - Fix Starship command syntax error and add restart/logout prompt
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.5-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.6-1
 - Ensure Flathub remote is always enabled and not left disabled
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.4-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.5-1
 - Include 19 Flatpak apps in different categories: Web Browsers, Development, Office, Media, Utilities
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.3-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.4-1
 - Refresh installed state after apply and improve completion detection
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.2-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.3-1
 - Add optional extra app, shell, prompt, and Nerd Font installs
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.1-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.2-1
 - Improve scrolling and log layout
 
-* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.1.0-1
+* Sun May 31 2026 mahbub khan <mahbub.aumi@gmail.com> - 0.0.1-1
 - Initial package
